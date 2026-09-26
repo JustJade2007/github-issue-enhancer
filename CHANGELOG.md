@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Composite GitHub Action metadata (`action.yml`) allowing direct multi-repo usage via `uses: <owner>/github-issue-enhancer@main`.
 - Added GitHub Action marketplace branding in `action.yml` with `icon: alert-circle` and `color: blue`.
 - Optimized `action.yml` description to comply with GitHub Marketplace limit (<= 125 characters).
+- Cleaned character encoding in `action.yml` to remove UTF-8 BOM preventing Marketplace parser detection.
 - Pre-bundled standalone distribution (`dist/index.mjs`) for zero-dependency execution across any repository.
 - Gemini integration (`src/gemini.js`) enforcing strict constraints to reword and expand issues for clarity and GitHub formatting without adding new assumptions or content.
 - Automatic model fallback sequence prioritizing `gemini-3.1-flash-lite`, `gemini-2.5-flash-lite`, and `gemini-2.0-flash-lite`.
