@@ -1,0 +1,35 @@
+﻿name: "GitHub Issue Enhancer"
+description: "Automatically rewords and formats new GitHub issues using Gemini Flash Lite without adding new content"
+author: "JustJade2007"
+inputs:
+  gemini-api-key:
+    description: "Google Gemini API Key"
+    required: true
+  github-token:
+    description: "GitHub token with issues:write permission"
+    required: false
+    default: ${{ github.token }}
+  gemini-model:
+    description: "Gemini model to use"
+    required: false
+    default: "gemini-2.5-flash-lite"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    - name: Format Issue with Gemini
+      shell: bash
+      env:
+        GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        ISSUE_NUMBER: ${{ github.event.issue.number }}
+        ISSUE_TITLE: ${{ github.event.issue.title }}
+        ISSUE_BODY: ${{ github.event.issue.body }}
+        REPOSITORY: ${{ github.repository }}
+        GEMINI_MODEL: ${{ inputs.gemini-model }}
+      run: node "${{ github.action_path }}/dist/index.mjs"
