@@ -1,7 +1,7 @@
-{
+﻿{
   "name": "github-issue-enhancer",
   "version": "0.1.0",
-  "description": "Automatically rewords and formats newly created GitHub issues using Gemini Flash Lite without adding new content.",
+  "description": "Rewords and formats new GitHub issues using Gemini Flash Lite without adding new content.",
   "type": "module",
   "main": "src/index.js",
   "bin": {
@@ -18,15 +18,14 @@
     "flash-lite",
     "issue-formatter"
   ],
-  "author": "",
+  "author": "JustJade2007",
   "license": "MIT",
   "dependencies": {
     "@google/genai": "^2.24.0",
     "@octokit/rest": "^21.1.1",
-    "dotenv": "^16.4.7",
-    "react-example": "file:../Central-Website"
+    "dotenv": "^16.4.7"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.25.1"
   }
 }
