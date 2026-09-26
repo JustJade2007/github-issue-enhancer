@@ -1,0 +1,28 @@
+﻿# Dependencies
+node_modules/
+
+# Environment variables & secrets
+.env
+.env.*
+*.key
+*.pem
+
+# Build output
+dist/
+bin/*.exe
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS and Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# AI and IDE tools
+.gemini/
+.agents/
+antigravity/
