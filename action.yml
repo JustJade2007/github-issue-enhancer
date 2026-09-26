@@ -1,6 +1,9 @@
 ﻿name: "GitHub Issue Enhancer"
-description: "Automatically rewords and formats new GitHub issues using Gemini Flash Lite without adding new content"
+description: "Automatically rewords, structures, and expands new GitHub issues into professional GitHub Markdown using Gemini Flash Lite without adding new content or assumptions."
 author: "JustJade2007"
+branding:
+  icon: "alert-circle"
+  color: "blue"
 inputs:
   gemini-api-key:
     description: "Google Gemini API Key"
@@ -10,7 +13,7 @@ inputs:
     required: false
     default: ${{ github.token }}
   gemini-model:
-    description: "Gemini model to use"
+    description: "Gemini model to use (defaults to gemini-2.5-flash-lite)"
     required: false
     default: "gemini-2.5-flash-lite"
 

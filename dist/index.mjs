@@ -49932,6 +49932,10 @@ async function updateGitHubIssue({
   const octokit = new Octokit2({ auth: token });
   const updatedIssueBody = [
     ENHANCED_MARKER,
+    "> [!NOTE]",
+    "> **Issue Formatted with Gemini Flash Lite**",
+    "> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.",
+    "",
     enhancedBody,
     "",
     "---",
@@ -49951,9 +49955,9 @@ async function updateGitHubIssue({
   });
   console.log(`[GitHub] Successfully updated issue #${num} description.`);
   const commentContent = [
-    "### \u{1F916} Issue Formatted with Gemini Flash Lite",
-    "",
-    "This issue description was automatically reworded and structured for clarity and readability without adding any new content or assumptions.",
+    "> [!NOTE]",
+    "> ### \u{1F916} Issue Formatted with Gemini Flash Lite",
+    "> This issue description was automatically reworded and structured for clarity and readability without adding any new content or assumptions.",
     "",
     `- **Model Used:** \`${modelUsed}\``,
     "- **Changes:** Reworded and organized into standard GitHub issue format.",

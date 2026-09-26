@@ -47,9 +47,13 @@ export async function updateGitHubIssue({
 
   const octokit = new Octokit({ auth: token });
 
-  // Construct new body with tracking marker and collapsible original submission
+  // Construct new body with tracking marker, blue alert note badge, and collapsible original submission
   const updatedIssueBody = [
     ENHANCED_MARKER,
+    "> [!NOTE]",
+    "> **Issue Formatted with Gemini Flash Lite**",
+    "> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.",
+    "",
     enhancedBody,
     "",
     "---",
@@ -70,11 +74,11 @@ export async function updateGitHubIssue({
   });
   console.log(`[GitHub] Successfully updated issue #${num} description.`);
 
-  // Post a summary comment on the issue
+  // Post a summary comment on the issue with blue alert style
   const commentContent = [
-    "### 🤖 Issue Formatted with Gemini Flash Lite",
-    "",
-    "This issue description was automatically reworded and structured for clarity and readability without adding any new content or assumptions.",
+    "> [!NOTE]",
+    "> ### 🤖 Issue Formatted with Gemini Flash Lite",
+    "> This issue description was automatically reworded and structured for clarity and readability without adding any new content or assumptions.",
     "",
     `- **Model Used:** \`${modelUsed}\``,
     "- **Changes:** Reworded and organized into standard GitHub issue format.",
