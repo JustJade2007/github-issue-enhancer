@@ -2,7 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2026-09-26]
+## [0.1.1] - 2026-09-27
+
+### Fixed
+- Fixed workflow failure where `actions/setup-node@v4` threw `Error: Dependencies lock file is not found` on repositories without `package-lock.json` (such as `AVA-School-Assistant-2`).
+- Replaced manual checkout, node caching, and `npm ci` steps in `.github/workflows/enhance-issue.yml` with direct invocation of reusable action `JustJade2007/github-issue-enhancer@main`.
+- Ensured GitHub Action workflow runs completely out of the box with zero external dependencies, lockfiles, or files needed in consumer repositories.
+- Updated `run.bat` to launch bundled `dist/index.mjs` directly if present, eliminating node_modules installation prerequisite for quick execution.
+
+### Changed
+- Streamlined documentation in `README.md` to demonstrate single out-of-the-box workflow integration without requiring file copying.
+- Rebuilt distribution bundle `dist/index.mjs`.
+
+## [0.1.0] - 2026-09-26
 
 ### Added
 - Initial release of GitHub Issue Enhancer using Gemini Flash Lite.

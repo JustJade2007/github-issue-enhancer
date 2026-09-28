@@ -1,4 +1,4 @@
-﻿# GitHub Issue Enhancer
+# GitHub Issue Enhancer
 
 An automated GitHub workflow and CLI utility powered by Google Gemini Flash Lite that rewords, clarifies, and formats new repository issues into clean, professional GitHub issue markdown **without adding new content, assumptions, or hallucinations**.
 
@@ -10,20 +10,20 @@ An automated GitHub workflow and CLI utility powered by Google Gemini Flash Lite
   1. Updates the issue body with structured markdown while preserving the raw text in an expandable `<details>` section for transparency.
   2. Posts a status comment confirming the issue has been formatted with Gemini Flash Lite.
 - **Multi-Repo Reusable Action:** Packaged as a standard GitHub Action (`action.yml`) so any repository on GitHub can consume it with a 15-line workflow file.
-- **Zero-Dependency Runner:** Pre-bundled with `dist/index.mjs` so downstream repos do not need to run `npm install`.
+- **Zero-Dependency Runner:** Pre-bundled with `dist/index.mjs` so downstream repos do not need to run `npm install`, provide a `package-lock.json`, or contain Node.js code.
 - **Loop & Duplicate Protection:** Uses metadata markers (`<!-- gemini-enhanced -->`) to avoid repeated formatting or execution loops.
 - **Model Support & Fallback:** Configured for `gemini-3.1-flash-lite` / `gemini-2.5-flash-lite` with automatic fallback handling.
 - **Local Testing:** Test directly on your local machine using interactive prompts or CLI flags via `run.bat` or `node src/index.js`.
 
 ---
 
-## How to Use in Other Repositories
+## How to Use in Any Repository
 
-Once you push this repository to GitHub (e.g. `your-username/github-issue-enhancer`), you can use it in any other repository using one of the two methods below:
+To use GitHub Issue Enhancer in any repository (Python, Go, Rust, Java, Web, or issues-only repos), **no additional files or dependencies are needed in your repository**.
 
-### Method 1: Reusable Action (Recommended)
+### Step 1: Create the Workflow File
 
-In your other repository, create `.github/workflows/enhance-issue.yml`:
+In your target repository, create `.github/workflows/enhance-issue.yml`:
 
 ```yaml
 name: Enhance New Issue
@@ -37,29 +37,23 @@ permissions:
   contents: read
 
 jobs:
-  enhance:
+  enhance-issue:
+    name: Reword and Format Issue
     runs-on: ubuntu-latest
     steps:
       - name: Enhance Issue with Gemini Flash Lite
-        uses: your-username/github-issue-enhancer@main
+        uses: JustJade2007/github-issue-enhancer@main
         with:
           gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-#### Step 2: Add Secret to the Other Repository
-1. Go to your target repository's **Settings > Secrets and variables > Actions > New repository secret**.
+### Step 2: Add Secret to the Target Repository
+1. Go to your repository's **Settings > Secrets and variables > Actions > New repository secret**.
 2. Name: `GEMINI_API_KEY`
 3. Value: Your Google Gemini API key.
 
----
-
-### Method 2: Standalone Workflow (Direct Copy)
-
-If you prefer keeping everything self-contained in the other repository:
-1. Copy the `.github/workflows/enhance-issue.yml` file.
-2. Copy `src/`, `package.json`, and `package-lock.json` into that repository.
-3. Add the `GEMINI_API_KEY` secret to that repository.
+That's all! The action executes self-contained via its pre-bundled distribution and requires no `package.json`, `package-lock.json`, or code checkout in the target repository.
 
 ---
 
@@ -69,7 +63,7 @@ If you prefer keeping everything self-contained in the other repository:
 github-issue-enhancer/
 ├── .github/
 │   └── workflows/
-│       └── enhance-issue.yml  # Issue trigger workflow
+│       └── enhance-issue.yml  # Out-of-the-box issue trigger workflow
 ├── action.yml                 # Reusable GitHub Action definition
 ├── dist/
 │   └── index.mjs              # Standalone bundled executable (zero dependencies)
@@ -83,7 +77,7 @@ github-issue-enhancer/
 ├── SECURITY.md                # Security & secret management policy
 ├── README.md                  # Project documentation
 ├── run.bat                    # Windows launch & test script
-├── package.json               # Node.js project manifest (v0.1.0)
+├── package.json               # Node.js project manifest (v0.1.1)
 └── .gitignore                 # Ignored dependencies & secrets
 ```
 

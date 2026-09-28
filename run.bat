@@ -15,13 +15,15 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-if not exist "node_modules" (
-    echo [INFO] Installing required dependencies...
-    call npm install
-    if %ERRORLEVEL% neq 0 (
-        echo [ERROR] Dependency installation failed.
-        pause
-        exit /b 1
+if not exist "dist\index.mjs" (
+    if not exist "node_modules" (
+        echo [INFO] Installing required dependencies...
+        call npm install
+        if %ERRORLEVEL% neq 0 (
+            echo [ERROR] Dependency installation failed.
+            pause
+            exit /b 1
+        )
     )
 )
 
@@ -36,10 +38,18 @@ if not exist ".env" (
 echo Starting Issue Enhancer...
 echo.
 
-if "%~1"=="" (
-    node src\index.js
+if exist "dist\index.mjs" (
+    if "%~1"=="" (
+        node dist\index.mjs
+    ) else (
+        node dist\index.mjs %*
+    )
 ) else (
-    node src\index.js %*
+    if "%~1"=="" (
+        node src\index.js
+    ) else (
+        node src\index.js %*
+    )
 )
 
 if %ERRORLEVEL% neq 0 (
