@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-09-27
+
+### Added
+- **Centralized Workflow Settings Section:** Implemented a unified, clearly defined settings block in `.github/workflows/enhance-issue.yml` and `.github/workflow-templates/enhance-issue.yml` for managing all workflow behaviors and optional features.
+- **Configurable Feature Toggles:**
+  - `post-comment`: Toggle posting the automated informational summary comment on the issue (`true`/`false`, default `true`).
+  - `preserve-original`: Toggle appending the original raw submission inside an expandable `<details>` section (`true`/`false`, default `true`).
+  - `add-badge`: Toggle prepending the `> [!NOTE]` header callout badge to the formatted issue description (`true`/`false`, default `true`).
+  - `enhance-title`: Toggle rewording and clarifying the issue title in addition to the issue body (`true`/`false`, default `false`).
+- **Issue Filtering & Automation Settings:**
+  - `add-labels`: Automatically apply specified comma-separated labels (e.g. `enhanced`) when an issue is enhanced.
+  - `ignore-authors`: Skip issues opened by designated bot or user accounts (e.g. `dependabot[bot],renovate[bot]`).
+  - `ignore-labels`: Skip enhancement if the issue already contains specified labels (e.g. `no-enhance`).
+- **Model & Generation Customization:**
+  - `temperature`: Configurable sampling temperature (0.0 - 1.0, default `0.2`) for high-precision output.
+  - `custom-instruction`: Inject repository-specific formatting instructions or domain guidelines into Gemini's system instructions.
+- **Centralized Configuration Loader (`src/config.js`):** Unified configuration parser supporting action inputs, environment variables, CLI parameters, and optional repository configuration file (`.github/issue-enhancer.json`).
+- Updated `action.yml` with the complete inputs schema and mapped environment variables.
+- Updated `run.bat`, `.env.example`, and CLI runner with new configuration options and flags.
+
 ## [0.1.2] - 2026-09-27
 
 ### Added

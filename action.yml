@@ -16,6 +16,42 @@ inputs:
     description: 'Gemini model to use'
     required: false
     default: 'gemini-2.5-flash-lite'
+  temperature:
+    description: 'Sampling temperature for Gemini (0.0 to 1.0)'
+    required: false
+    default: '0.2'
+  custom-instruction:
+    description: 'Custom instructions or formatting guidelines for Gemini'
+    required: false
+    default: ''
+  post-comment:
+    description: 'Whether to post an informational confirmation comment (true/false)'
+    required: false
+    default: 'true'
+  preserve-original:
+    description: 'Whether to append original submission in collapsible dropdown (true/false)'
+    required: false
+    default: 'true'
+  add-badge:
+    description: 'Whether to prepend [!NOTE] header badge in issue body (true/false)'
+    required: false
+    default: 'true'
+  enhance-title:
+    description: 'Whether to clarify and reword the issue title (true/false)'
+    required: false
+    default: 'false'
+  add-labels:
+    description: 'Comma-separated labels to apply upon enhancement'
+    required: false
+    default: ''
+  ignore-authors:
+    description: 'Comma-separated usernames/bots to ignore'
+    required: false
+    default: ''
+  ignore-labels:
+    description: 'Comma-separated labels that skip enhancement if already present'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -33,6 +69,17 @@ runs:
         ISSUE_NUMBER: ${{ github.event.issue.number }}
         ISSUE_TITLE: ${{ github.event.issue.title }}
         ISSUE_BODY: ${{ github.event.issue.body }}
+        ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+        ISSUE_LABELS: ${{ toJson(github.event.issue.labels) }}
         REPOSITORY: ${{ github.repository }}
         GEMINI_MODEL: ${{ inputs.gemini-model }}
+        TEMPERATURE: ${{ inputs.temperature }}
+        CUSTOM_INSTRUCTION: ${{ inputs.custom-instruction }}
+        POST_COMMENT: ${{ inputs.post-comment }}
+        PRESERVE_ORIGINAL: ${{ inputs.preserve-original }}
+        ADD_BADGE: ${{ inputs.add-badge }}
+        ENHANCE_TITLE: ${{ inputs.enhance-title }}
+        ADD_LABELS: ${{ inputs.add-labels }}
+        IGNORE_AUTHORS: ${{ inputs.ignore-authors }}
+        IGNORE_LABELS: ${{ inputs.ignore-labels }}
       run: node "${{ github.action_path }}/dist/index.mjs"

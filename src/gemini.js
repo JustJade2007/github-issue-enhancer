@@ -1,4 +1,4 @@
-﻿import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `You are an expert GitHub issue formatter and technical rewording assistant.
 Your task is to take an issue title and description and reword/expand it into a clean, professional, and well-structured GitHub issue format WITHOUT ADDING NEW CONTENT, ASSUMPTIONS, OR FABRICATIONS.
@@ -24,37 +24,86 @@ const DEFAULT_MODELS = [
  * Rewords and formats an issue using Gemini Flash Lite without adding new content.
  * @param {string} title - The issue title
  * @param {string} body - The raw issue body
- * @returns {Promise<{ enhancedBody: string, modelUsed: string }>}
+ * @param {object} [options={}] - Configurable options
+ * @param {string} [options.model] - Gemini model override
+ * @param {number} [options.temperature] - Temperature (0.0 - 1.0)
+ * @param {string} [options.customInstruction] - Custom guidelines
+ * @param {boolean} [options.enhanceTitle] - Whether to reword title
+ * @returns {Promise<{ enhancedTitle: string|null, enhancedBody: string, modelUsed: string }>}
  */
-export async function enhanceIssue(title, body) {
+export async function enhanceIssue(title, body, options = {}) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY environment variable is missing.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
-  const prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure. Do not add any new facts, assumptions, reproduction steps, or content that was not in the original issue.\n\nIssue Title: ${title || "(No title provided)"}\n\nIssue Content:\n${body || "(No description provided)"}`;
+
+  const customInstruction = options.customInstruction || "";
+  const temperature =
+    typeof options.temperature === "number" && !isNaN(options.temperature)
+      ? options.temperature
+      : 0.2;
+  const enhanceTitle = Boolean(options.enhanceTitle);
+
+  let systemInstruction = SYSTEM_INSTRUCTION;
+  if (customInstruction.trim()) {
+    systemInstruction += `\n\nADDITIONAL USER GUIDELINES:\n${customInstruction.trim()}`;
+  }
+
+  let prompt = "";
+  if (enhanceTitle) {
+    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure. Clarify both the title and the body without adding any new facts, assumptions, reproduction steps, or content that was not in the original issue.
+
+Return your response strictly in the following format:
+TITLE: <rewritten clear, concise, and professional issue title>
+BODY:
+<rewritten markdown issue description>
+
+Issue Title: ${title || "(No title provided)"}
+
+Issue Content:
+${body || "(No description provided)"}`;
+  } else {
+    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure. Do not add any new facts, assumptions, reproduction steps, or content that was not in the original issue.\n\nIssue Title: ${title || "(No title provided)"}\n\nIssue Content:\n${body || "(No description provided)"}`;
+  }
 
   // Deduplicate model candidates
-  const candidateModels = Array.from(new Set(DEFAULT_MODELS));
+  const candidateModels = Array.from(
+    new Set([options.model, ...DEFAULT_MODELS].filter(Boolean))
+  );
   let lastError = null;
 
   for (const model of candidateModels) {
     try {
-      console.log(`[Gemini] Attempting generation with model: ${model}`);
+      console.log(`[Gemini] Attempting generation with model: ${model} (temperature: ${temperature})`);
       const response = await ai.models.generateContent({
         model,
         contents: prompt,
         config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.2 // Low temperature for high fidelity and zero hallucinations
+          systemInstruction,
+          temperature
         }
       });
 
       if (response && response.text) {
+        const rawText = response.text.trim();
         console.log(`[Gemini] Successfully formatted issue using model: ${model}`);
+
+        if (enhanceTitle) {
+          const match = rawText.match(/^TITLE:\s*(.+?)(?:\r?\n)+BODY:\s*([\s\S]+)$/i);
+          if (match) {
+            return {
+              enhancedTitle: match[1].trim(),
+              enhancedBody: match[2].trim(),
+              modelUsed: model
+            };
+          }
+        }
+
         return {
-          enhancedBody: response.text.trim(),
+          enhancedTitle: null,
+          enhancedBody: rawText,
           modelUsed: model
         };
       }
@@ -67,3 +116,4 @@ export async function enhanceIssue(title, body) {
 
   throw new Error(`All Gemini models failed. Last error: ${lastError?.message || "Unknown error"}`);
 }
+

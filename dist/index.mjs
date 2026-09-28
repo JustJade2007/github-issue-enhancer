@@ -119,7 +119,7 @@ var require_package = __commonJS({
 // node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
   "node_modules/dotenv/lib/main.js"(exports, module) {
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var path2 = __require("path");
     var os = __require("os");
     var crypto2 = __require("crypto");
@@ -228,7 +228,7 @@ var require_main = __commonJS({
       if (options && options.path && options.path.length > 0) {
         if (Array.isArray(options.path)) {
           for (const filepath of options.path) {
-            if (fs4.existsSync(filepath)) {
+            if (fs5.existsSync(filepath)) {
               possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
             }
           }
@@ -238,7 +238,7 @@ var require_main = __commonJS({
       } else {
         possibleVaultPath = path2.resolve(process.cwd(), ".env.vault");
       }
-      if (fs4.existsSync(possibleVaultPath)) {
+      if (fs5.existsSync(possibleVaultPath)) {
         return possibleVaultPath;
       }
       return null;
@@ -287,7 +287,7 @@ var require_main = __commonJS({
       const parsedAll = {};
       for (const path3 of optionPaths) {
         try {
-          const parsed = DotenvModule.parse(fs4.readFileSync(path3, { encoding }));
+          const parsed = DotenvModule.parse(fs5.readFileSync(path3, { encoding }));
           DotenvModule.populate(parsedAll, parsed, options);
         } catch (e2) {
           if (debug) {
@@ -7244,7 +7244,7 @@ var require_node_domexception = __commonJS({
 });
 
 // node_modules/fetch-blob/from.js
-import { statSync, createReadStream, promises as fs } from "node:fs";
+import { statSync, createReadStream, promises as fs2 } from "node:fs";
 import { basename } from "node:path";
 var import_node_domexception, stat, blobFromSync, blobFrom, fileFrom, fileFromSync, fromBlob, fromFile, BlobDataItem;
 var init_from = __esm({
@@ -7252,7 +7252,7 @@ var init_from = __esm({
     import_node_domexception = __toESM(require_node_domexception(), 1);
     init_file();
     init_fetch_blob();
-    ({ stat } = fs);
+    ({ stat } = fs2);
     blobFromSync = (path2, type) => fromBlob(statSync(path2), path2, type);
     blobFrom = (path2, type) => stat(path2).then((stat3) => fromBlob(stat3, path2, type));
     fileFrom = (path2, type) => stat(path2).then((stat3) => fromFile(stat3, path2, type));
@@ -12447,7 +12447,7 @@ var require_util2 = __commonJS({
     exports.removeUndefinedValuesInObject = removeUndefinedValuesInObject;
     exports.isValidFile = isValidFile;
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var os = __require("os");
     var path2 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
@@ -12535,7 +12535,7 @@ var require_util2 = __commonJS({
     }
     async function isValidFile(filePath) {
       try {
-        const stats = await fs4.promises.lstat(filePath);
+        const stats = await fs5.promises.lstat(filePath);
         return stats.isFile();
       } catch (e2) {
         return false;
@@ -14490,10 +14490,10 @@ var require_getCredentials = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
     var path2 = __require("path");
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
-    var readFile = fs4.readFile ? (0, util_1.promisify)(fs4.readFile) : async () => {
+    var readFile = fs5.readFile ? (0, util_1.promisify)(fs5.readFile) : async () => {
       throw new errorWithCode_1.ErrorWithCode("use key rather than keyFile.", "MISSING_CREDENTIALS");
     };
     var ExtensionFiles;
@@ -16170,12 +16170,12 @@ var require_filesubjecttokensupplier = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FileSubjectTokenSupplier = void 0;
     var util_1 = __require("util");
-    var fs4 = __require("fs");
-    var readFile = (0, util_1.promisify)(fs4.readFile ?? (() => {
+    var fs5 = __require("fs");
+    var readFile = (0, util_1.promisify)(fs5.readFile ?? (() => {
     }));
-    var realpath = (0, util_1.promisify)(fs4.realpath ?? (() => {
+    var realpath = (0, util_1.promisify)(fs5.realpath ?? (() => {
     }));
-    var lstat = (0, util_1.promisify)(fs4.lstat ?? (() => {
+    var lstat = (0, util_1.promisify)(fs5.lstat ?? (() => {
     }));
     var FileSubjectTokenSupplier = class {
       filePath;
@@ -16293,7 +16293,7 @@ var require_certificatesubjecttokensupplier = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CertificateSubjectTokenSupplier = exports.InvalidConfigurationError = exports.CertificateSourceUnavailableError = exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = void 0;
     var util_1 = require_util2();
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var crypto_1 = __require("crypto");
     var https2 = __require("https");
     exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = "GOOGLE_API_CERTIFICATE_CONFIG";
@@ -16387,7 +16387,7 @@ var require_certificatesubjecttokensupplier = __commonJS({
         const configPath = this.certificateConfigPath;
         let fileContents;
         try {
-          fileContents = await fs4.promises.readFile(configPath, "utf8");
+          fileContents = await fs5.promises.readFile(configPath, "utf8");
         } catch (err) {
           throw new CertificateSourceUnavailableError(`Failed to read certificate config file at: ${configPath}`);
         }
@@ -16412,14 +16412,14 @@ var require_certificatesubjecttokensupplier = __commonJS({
       async #getKeyAndCert(certPath, keyPath) {
         let cert, key;
         try {
-          cert = await fs4.promises.readFile(certPath);
+          cert = await fs5.promises.readFile(certPath);
           new crypto_1.X509Certificate(cert);
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           throw new CertificateSourceUnavailableError(`Failed to read certificate file at ${certPath}: ${message}`);
         }
         try {
-          key = await fs4.promises.readFile(keyPath);
+          key = await fs5.promises.readFile(keyPath);
           (0, crypto_1.createPrivateKey)(key);
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
@@ -16438,7 +16438,7 @@ var require_certificatesubjecttokensupplier = __commonJS({
           return JSON.stringify([leafCert.raw.toString("base64")]);
         }
         try {
-          const chainPems = await fs4.promises.readFile(this.trustChainPath, "utf8");
+          const chainPems = await fs5.promises.readFile(this.trustChainPath, "utf8");
           const pemBlocks = chainPems.match(/-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----/g) ?? [];
           const chainCerts = pemBlocks.map((pem, index) => {
             try {
@@ -17140,7 +17140,7 @@ var require_pluggable_auth_handler = __commonJS({
     exports.PluggableAuthHandler = exports.ExecutableError = void 0;
     var executable_response_1 = require_executable_response();
     var childProcess = __require("child_process");
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var ExecutableError = class extends Error {
       /**
        * The exit code returned by the executable.
@@ -17225,14 +17225,14 @@ var require_pluggable_auth_handler = __commonJS({
         }
         let filePath;
         try {
-          filePath = await fs4.promises.realpath(this.outputFile);
+          filePath = await fs5.promises.realpath(this.outputFile);
         } catch {
           return void 0;
         }
-        if (!(await fs4.promises.lstat(filePath)).isFile()) {
+        if (!(await fs5.promises.lstat(filePath)).isFile()) {
           return void 0;
         }
-        const responseString = await fs4.promises.readFile(filePath, {
+        const responseString = await fs5.promises.readFile(filePath, {
           encoding: "utf8"
         });
         if (responseString === "") {
@@ -17643,7 +17643,7 @@ var require_gdchclient = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GdchClient = exports.GDCH_SERVICE_ACCOUNT_TYPE = void 0;
     var crypto2 = __require("crypto");
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var https2 = __require("https");
     var oauth2client_1 = require_oauth2client();
     var DEFAULT_LIFETIME_IN_SECONDS = 3600;
@@ -17866,7 +17866,7 @@ var require_gdchclient = __commonJS({
         const currentPath = this.caCertPath;
         this.caAgentPromise = (async () => {
           try {
-            const ca = await fs4.promises.readFile(currentPath);
+            const ca = await fs5.promises.readFile(currentPath);
             return new https2.Agent({ ca });
           } catch (err) {
             if (this.cachedCaCertPath === currentPath) {
@@ -17926,7 +17926,7 @@ var require_googleauth = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GoogleAuth = exports.GoogleAuthExceptionMessages = void 0;
     var child_process_1 = __require("child_process");
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
     var os = __require("os");
@@ -18228,7 +18228,7 @@ var require_googleauth = __commonJS({
           return null;
         }
         const location = path2.join(configDir, "application_default_credentials.json");
-        if (!fs4.existsSync(location)) {
+        if (!fs5.existsSync(location)) {
           return null;
         }
         const client = await this._getApplicationCredentialsFromFilePath(location, options);
@@ -18245,8 +18245,8 @@ var require_googleauth = __commonJS({
           throw new Error("The file path is invalid.");
         }
         try {
-          filePath = fs4.realpathSync(filePath);
-          if (!fs4.lstatSync(filePath).isFile()) {
+          filePath = fs5.realpathSync(filePath);
+          if (!fs5.lstatSync(filePath).isFile()) {
             throw new Error();
           }
         } catch (err) {
@@ -18255,7 +18255,7 @@ var require_googleauth = __commonJS({
           }
           throw err;
         }
-        const readStream = fs4.createReadStream(filePath);
+        const readStream = fs5.createReadStream(filePath);
         return this.fromStream(readStream, options);
       }
       /**
@@ -18583,7 +18583,7 @@ var require_googleauth = __commonJS({
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
           const filePath = path2.resolve(this.keyFilename);
-          const stream = fs4.createReadStream(filePath);
+          const stream = fs5.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
           const client = await this.fromAPIKey(this.apiKey, this.clientOptions);
@@ -22907,14 +22907,78 @@ var require_fast_content_type_parse = __commonJS({
 })();
 
 // src/index.js
-import fs3 from "fs";
+import fs4 from "fs";
 import readline from "readline";
+
+// src/config.js
+import fs from "fs";
+var DEFAULT_CONFIG = {
+  geminiModel: "gemini-2.5-flash-lite",
+  temperature: 0.2,
+  customInstruction: "",
+  postComment: true,
+  preserveOriginal: true,
+  addBadge: true,
+  enhanceTitle: false,
+  addLabels: [],
+  ignoreAuthors: [],
+  ignoreLabels: []
+};
+function parseBoolean(val, defaultValue = true) {
+  if (val === void 0 || val === null || val === "") return defaultValue;
+  if (typeof val === "boolean") return val;
+  const str = String(val).trim().toLowerCase();
+  if (str === "false" || str === "0" || str === "no" || str === "off") return false;
+  if (str === "true" || str === "1" || str === "yes" || str === "on") return true;
+  return defaultValue;
+}
+function parseList(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.map((s2) => String(s2).trim()).filter(Boolean);
+  return String(val).split(",").map((s2) => s2.trim()).filter(Boolean);
+}
+function loadConfig(overrides = {}) {
+  let fileConfig = {};
+  const configPaths = [
+    ".github/issue-enhancer.json",
+    ".github/issue-enhancer-config.json",
+    "issue-enhancer.json"
+  ];
+  for (const configPath of configPaths) {
+    if (fs.existsSync(configPath)) {
+      try {
+        fileConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+        console.log(`[Config] Loaded settings from ${configPath}`);
+        break;
+      } catch (err) {
+        console.warn(`[Config] Warning: Failed to parse ${configPath}:`, err.message);
+      }
+    }
+  }
+  const env2 = process.env;
+  const config = {
+    geminiModel: overrides.model || env2.GEMINI_MODEL || fileConfig.geminiModel || DEFAULT_CONFIG.geminiModel,
+    temperature: overrides.temperature !== void 0 ? parseFloat(overrides.temperature) : env2.TEMPERATURE !== void 0 && env2.TEMPERATURE !== "" ? parseFloat(env2.TEMPERATURE) : fileConfig.temperature !== void 0 ? parseFloat(fileConfig.temperature) : DEFAULT_CONFIG.temperature,
+    customInstruction: overrides.customInstruction !== void 0 ? overrides.customInstruction : env2.CUSTOM_INSTRUCTION !== void 0 ? env2.CUSTOM_INSTRUCTION : fileConfig.customInstruction || DEFAULT_CONFIG.customInstruction,
+    postComment: overrides.postComment !== void 0 ? parseBoolean(overrides.postComment, DEFAULT_CONFIG.postComment) : env2.POST_COMMENT !== void 0 ? parseBoolean(env2.POST_COMMENT, DEFAULT_CONFIG.postComment) : fileConfig.postComment !== void 0 ? parseBoolean(fileConfig.postComment, DEFAULT_CONFIG.postComment) : DEFAULT_CONFIG.postComment,
+    preserveOriginal: overrides.preserveOriginal !== void 0 ? parseBoolean(overrides.preserveOriginal, DEFAULT_CONFIG.preserveOriginal) : env2.PRESERVE_ORIGINAL !== void 0 ? parseBoolean(env2.PRESERVE_ORIGINAL, DEFAULT_CONFIG.preserveOriginal) : fileConfig.preserveOriginal !== void 0 ? parseBoolean(fileConfig.preserveOriginal, DEFAULT_CONFIG.preserveOriginal) : DEFAULT_CONFIG.preserveOriginal,
+    addBadge: overrides.addBadge !== void 0 ? parseBoolean(overrides.addBadge, DEFAULT_CONFIG.addBadge) : env2.ADD_BADGE !== void 0 ? parseBoolean(env2.ADD_BADGE, DEFAULT_CONFIG.addBadge) : fileConfig.addBadge !== void 0 ? parseBoolean(fileConfig.addBadge, DEFAULT_CONFIG.addBadge) : DEFAULT_CONFIG.addBadge,
+    enhanceTitle: overrides.enhanceTitle !== void 0 ? parseBoolean(overrides.enhanceTitle, DEFAULT_CONFIG.enhanceTitle) : env2.ENHANCE_TITLE !== void 0 ? parseBoolean(env2.ENHANCE_TITLE, DEFAULT_CONFIG.enhanceTitle) : fileConfig.enhanceTitle !== void 0 ? parseBoolean(fileConfig.enhanceTitle, DEFAULT_CONFIG.enhanceTitle) : DEFAULT_CONFIG.enhanceTitle,
+    addLabels: overrides.addLabels !== void 0 ? parseList(overrides.addLabels) : env2.ADD_LABELS !== void 0 ? parseList(env2.ADD_LABELS) : fileConfig.addLabels !== void 0 ? parseList(fileConfig.addLabels) : DEFAULT_CONFIG.addLabels,
+    ignoreAuthors: overrides.ignoreAuthors !== void 0 ? parseList(overrides.ignoreAuthors) : env2.IGNORE_AUTHORS !== void 0 ? parseList(env2.IGNORE_AUTHORS) : fileConfig.ignoreAuthors !== void 0 ? parseList(fileConfig.ignoreAuthors) : DEFAULT_CONFIG.ignoreAuthors,
+    ignoreLabels: overrides.ignoreLabels !== void 0 ? parseList(overrides.ignoreLabels) : env2.IGNORE_LABELS !== void 0 ? parseList(env2.IGNORE_LABELS) : fileConfig.ignoreLabels !== void 0 ? parseList(fileConfig.ignoreLabels) : DEFAULT_CONFIG.ignoreLabels
+  };
+  if (isNaN(config.temperature) || config.temperature < 0 || config.temperature > 1) {
+    config.temperature = DEFAULT_CONFIG.temperature;
+  }
+  return config;
+}
 
 // node_modules/@google/genai/dist/node/index.mjs
 var import_p_retry = __toESM(require_p_retry(), 1);
 var import_google_auth_library = __toESM(require_src5(), 1);
 import { createWriteStream } from "fs";
-import * as fs2 from "fs/promises";
+import * as fs3 from "fs/promises";
 import { writeFile } from "fs/promises";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
@@ -43630,8 +43694,8 @@ var GeminiNextGenEnvironmentFiles = class {
       try {
         const req = globalThis.require;
         if (req) {
-          const fs4 = req("fs");
-          buffer = fs4.readFileSync(params.file);
+          const fs5 = req("fs");
+          buffer = fs5.readFileSync(params.file);
         }
       } catch (_j) {
       }
@@ -43639,8 +43703,8 @@ var GeminiNextGenEnvironmentFiles = class {
         try {
           const mod = (_b = (_a2 = globalThis.process.mainModule) === null || _a2 === void 0 ? void 0 : _a2.require) !== null && _b !== void 0 ? _b : globalThis.require;
           if (mod) {
-            const fs4 = mod("fs");
-            buffer = fs4.readFileSync(params.file);
+            const fs5 = mod("fs");
+            buffer = fs5.readFileSync(params.file);
           }
         } catch (_k) {
         }
@@ -45886,7 +45950,7 @@ var NodeUploader = class {
   async stat(file) {
     const fileStat = { size: 0, type: void 0 };
     if (typeof file === "string") {
-      const originalStat = await fs2.stat(file);
+      const originalStat = await fs3.stat(file);
       fileStat.size = originalStat.size;
       fileStat.type = this.inferMimeType(file);
       return fileStat;
@@ -46034,7 +46098,7 @@ var NodeUploader = class {
     let fileHandle;
     const fileName = path.basename(file);
     try {
-      fileHandle = await fs2.open(file, "r");
+      fileHandle = await fs3.open(file, "r");
       if (!fileHandle) {
         throw new Error(`Failed to open file`);
       }
@@ -46315,36 +46379,74 @@ var DEFAULT_MODELS = [
   "gemini-2.0-flash-lite",
   "gemini-1.5-flash"
 ].filter(Boolean);
-async function enhanceIssue(title, body) {
+async function enhanceIssue(title, body, options = {}) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY environment variable is missing.");
   }
   const ai = new GoogleGenAI2({ apiKey });
-  const prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure. Do not add any new facts, assumptions, reproduction steps, or content that was not in the original issue.
+  const customInstruction = options.customInstruction || "";
+  const temperature = typeof options.temperature === "number" && !isNaN(options.temperature) ? options.temperature : 0.2;
+  const enhanceTitle = Boolean(options.enhanceTitle);
+  let systemInstruction = SYSTEM_INSTRUCTION;
+  if (customInstruction.trim()) {
+    systemInstruction += `
+
+ADDITIONAL USER GUIDELINES:
+${customInstruction.trim()}`;
+  }
+  let prompt = "";
+  if (enhanceTitle) {
+    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure. Clarify both the title and the body without adding any new facts, assumptions, reproduction steps, or content that was not in the original issue.
+
+Return your response strictly in the following format:
+TITLE: <rewritten clear, concise, and professional issue title>
+BODY:
+<rewritten markdown issue description>
 
 Issue Title: ${title || "(No title provided)"}
 
 Issue Content:
 ${body || "(No description provided)"}`;
-  const candidateModels = Array.from(new Set(DEFAULT_MODELS));
+  } else {
+    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure. Do not add any new facts, assumptions, reproduction steps, or content that was not in the original issue.
+
+Issue Title: ${title || "(No title provided)"}
+
+Issue Content:
+${body || "(No description provided)"}`;
+  }
+  const candidateModels = Array.from(
+    new Set([options.model, ...DEFAULT_MODELS].filter(Boolean))
+  );
   let lastError = null;
   for (const model of candidateModels) {
     try {
-      console.log(`[Gemini] Attempting generation with model: ${model}`);
+      console.log(`[Gemini] Attempting generation with model: ${model} (temperature: ${temperature})`);
       const response = await ai.models.generateContent({
         model,
         contents: prompt,
         config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.2
-          // Low temperature for high fidelity and zero hallucinations
+          systemInstruction,
+          temperature
         }
       });
       if (response && response.text) {
+        const rawText = response.text.trim();
         console.log(`[Gemini] Successfully formatted issue using model: ${model}`);
+        if (enhanceTitle) {
+          const match2 = rawText.match(/^TITLE:\s*(.+?)(?:\r?\n)+BODY:\s*([\s\S]+)$/i);
+          if (match2) {
+            return {
+              enhancedTitle: match2[1].trim(),
+              enhancedBody: match2[2].trim(),
+              modelUsed: model
+            };
+          }
+        }
         return {
-          enhancedBody: response.text.trim(),
+          enhancedTitle: null,
+          enhancedBody: rawText,
           modelUsed: model
         };
       }
@@ -49914,9 +50016,11 @@ async function updateGitHubIssue({
   repository,
   issueNumber,
   originalTitle,
+  enhancedTitle,
   originalBody,
   enhancedBody,
-  modelUsed
+  modelUsed,
+  options = {}
 }) {
   if (!token) {
     throw new Error("GITHUB_TOKEN is required to update GitHub issues.");
@@ -49929,48 +50033,90 @@ async function updateGitHubIssue({
   if (isNaN(num)) {
     throw new Error(`Invalid issue number: ${issueNumber}`);
   }
+  const {
+    postComment = true,
+    preserveOriginal = true,
+    addBadge = true,
+    addLabels = []
+  } = options;
   const octokit = new Octokit2({ auth: token });
-  const updatedIssueBody = [
-    ENHANCED_MARKER,
-    "> [!NOTE]",
-    "> **Issue Formatted with Gemini Flash Lite**",
-    "> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.",
-    "",
-    enhancedBody,
-    "",
-    "---",
-    "<details>",
-    "<summary>\u{1F50D} <b>Original Submission</b> (Click to expand)</summary>",
-    "",
-    originalBody ? originalBody : "*(Original body was empty)*",
-    "",
-    "</details>"
-  ].join("\n");
-  console.log(`[GitHub] Updating issue #${num} in ${owner}/${repo}...`);
-  await octokit.rest.issues.update({
+  const bodyParts = [ENHANCED_MARKER];
+  if (addBadge) {
+    bodyParts.push(
+      "> [!NOTE]",
+      "> **Issue Formatted with Gemini Flash Lite**",
+      "> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.",
+      ""
+    );
+  }
+  bodyParts.push(enhancedBody);
+  if (preserveOriginal) {
+    bodyParts.push(
+      "",
+      "---",
+      "<details>",
+      "<summary>\u{1F50D} <b>Original Submission</b> (Click to expand)</summary>",
+      "",
+      originalBody ? originalBody : "*(Original body was empty)*",
+      "",
+      "</details>"
+    );
+  }
+  const updatedIssueBody = bodyParts.join("\n");
+  const updatePayload = {
     owner,
     repo,
     issue_number: num,
     body: updatedIssueBody
-  });
+  };
+  const hasTitleUpdate = Boolean(enhancedTitle && enhancedTitle !== originalTitle);
+  if (hasTitleUpdate) {
+    updatePayload.title = enhancedTitle;
+  }
+  console.log(`[GitHub] Updating issue #${num} in ${owner}/${repo}...`);
+  await octokit.rest.issues.update(updatePayload);
   console.log(`[GitHub] Successfully updated issue #${num} description.`);
-  const commentContent = [
-    "> [!NOTE]",
-    "> ### \u{1F916} Issue Formatted with Gemini Flash Lite",
-    "> This issue description was automatically reworded and structured for clarity and readability without adding any new content or assumptions.",
-    "",
-    `- **Model Used:** \`${modelUsed}\``,
-    "- **Changes:** Reworded and organized into standard GitHub issue format.",
-    "- **Original Content:** Preserved and accessible via the collapsible dropdown in the description above."
-  ].join("\n");
-  console.log(`[GitHub] Posting summary comment to issue #${num}...`);
-  await octokit.rest.issues.createComment({
-    owner,
-    repo,
-    issue_number: num,
-    body: commentContent
-  });
-  console.log(`[GitHub] Successfully posted comment to issue #${num}.`);
+  if (Array.isArray(addLabels) && addLabels.length > 0) {
+    try {
+      console.log(`[GitHub] Adding configured label(s) to issue #${num}: ${addLabels.join(", ")}`);
+      await octokit.rest.issues.addLabels({
+        owner,
+        repo,
+        issue_number: num,
+        labels: addLabels
+      });
+      console.log(`[GitHub] Successfully added labels to issue #${num}.`);
+    } catch (lblErr) {
+      console.warn(`[GitHub] Warning: Failed to apply labels to issue #${num}:`, lblErr.message);
+    }
+  }
+  if (postComment) {
+    const commentLines = [
+      "> [!NOTE]",
+      "> ### \u{1F916} Issue Formatted with Gemini Flash Lite",
+      "> This issue description was automatically reworded and structured for clarity and readability without adding any new content or assumptions.",
+      "",
+      `- **Model Used:** \`${modelUsed}\``,
+      "- **Changes:** Reworded and organized into standard GitHub issue format."
+    ];
+    if (hasTitleUpdate) {
+      commentLines.push(`- **Title Clarified:** "${originalTitle}" \u2192 "${enhancedTitle}"`);
+    }
+    if (preserveOriginal) {
+      commentLines.push("- **Original Content:** Preserved and accessible via the collapsible dropdown in the description above.");
+    }
+    const commentContent = commentLines.join("\n");
+    console.log(`[GitHub] Posting summary comment to issue #${num}...`);
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: num,
+      body: commentContent
+    });
+    console.log(`[GitHub] Successfully posted comment to issue #${num}.`);
+  } else {
+    console.log(`[GitHub] Skipping summary comment on issue #${num} (post-comment is disabled).`);
+  }
 }
 
 // src/index.js
@@ -49983,6 +50129,22 @@ function parseArgs() {
       parsed.title = args[++i2];
     } else if (arg === "--body" && i2 + 1 < args.length) {
       parsed.body = args[++i2];
+    } else if (arg === "--model" && i2 + 1 < args.length) {
+      parsed.model = args[++i2];
+    } else if (arg === "--temperature" && i2 + 1 < args.length) {
+      parsed.temperature = parseFloat(args[++i2]);
+    } else if (arg === "--custom-instruction" && i2 + 1 < args.length) {
+      parsed.customInstruction = args[++i2];
+    } else if (arg === "--enhance-title") {
+      parsed.enhanceTitle = true;
+    } else if (arg === "--no-comment") {
+      parsed.postComment = false;
+    } else if (arg === "--no-original") {
+      parsed.preserveOriginal = false;
+    } else if (arg === "--no-badge") {
+      parsed.addBadge = false;
+    } else if (arg === "--add-labels" && i2 + 1 < args.length) {
+      parsed.addLabels = args[++i2];
     } else if (arg === "--test") {
       parsed.test = true;
     } else if (arg === "--help" || arg === "-h") {
@@ -50010,13 +50172,22 @@ Usage:
   node src/index.js [options]
 
 Options:
-  --title <title>    Specify issue title
-  --body <body>      Specify issue body text
-  --test             Run with a simulated issue
-  --help, -h         Show help information
+  --title <title>              Specify issue title
+  --body <body>                Specify issue body text
+  --model <model>              Gemini model to use
+  --temperature <val>          Sampling temperature (0.0 - 1.0)
+  --custom-instruction <txt>   Custom formatting guidelines or rules
+  --enhance-title              Enable title rewording & clarification
+  --no-comment                 Disable posting summary comments
+  --no-original                Disable appending original submission block
+  --no-badge                   Disable [!NOTE] header callout badge
+  --add-labels <labels>        Comma-separated labels to apply
+  --test                       Run with a simulated issue
+  --help, -h                   Show help information
     `);
     process.exit(0);
   }
+  const config = loadConfig(args);
   let title = args.title;
   let body = args.body;
   if (args.test) {
@@ -50036,13 +50207,34 @@ Options:
     }
     body = lines.join("\n").trim();
   }
-  console.log("\nEnhancing issue with Gemini Flash Lite without adding new content...\n");
+  console.log(`
+Enhancing issue with Gemini (Model: ${config.geminiModel}, Temp: ${config.temperature})...
+`);
   try {
-    const { enhancedBody, modelUsed } = await enhanceIssue(title, body);
+    const { enhancedTitle, enhancedBody, modelUsed } = await enhanceIssue(title, body, {
+      model: config.geminiModel,
+      temperature: config.temperature,
+      customInstruction: config.customInstruction,
+      enhanceTitle: config.enhanceTitle
+    });
     console.log("==========================================");
     console.log(`  ENHANCED ISSUE (Model: ${modelUsed})`);
-    console.log("==========================================\n");
+    console.log("==========================================");
+    if (enhancedTitle) {
+      console.log(`
+Enhanced Title: ${enhancedTitle}
+`);
+    }
+    if (config.addBadge) {
+      console.log("> [!NOTE]\n> **Issue Formatted with Gemini Flash Lite**\n");
+    }
     console.log(enhancedBody);
+    if (config.preserveOriginal) {
+      console.log("\n---");
+      console.log("<details>\n<summary>\u{1F50D} <b>Original Submission</b></summary>\n");
+      console.log(body || "*(Original body was empty)*");
+      console.log("\n</details>");
+    }
     console.log("\n==========================================");
   } catch (error) {
     console.error("Enhancement failed:", error.message);
@@ -50051,17 +50243,36 @@ Options:
 }
 async function runGitHubAction() {
   console.log("[GitHub Action] Starting GitHub Issue Enhancer workflow...");
+  const config = loadConfig();
   let title = process.env.ISSUE_TITLE || "";
   let body = process.env.ISSUE_BODY || "";
   let issueNumber = process.env.ISSUE_NUMBER;
   let repository = process.env.REPOSITORY;
-  if (process.env.GITHUB_EVENT_PATH && fs3.existsSync(process.env.GITHUB_EVENT_PATH)) {
+  let author = process.env.ISSUE_AUTHOR || "";
+  let labels = [];
+  if (process.env.ISSUE_LABELS) {
     try {
-      const eventData = JSON.parse(fs3.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
+      const parsedLabels = JSON.parse(process.env.ISSUE_LABELS);
+      if (Array.isArray(parsedLabels)) {
+        labels = parsedLabels.map((l) => typeof l === "string" ? l : l.name || "");
+      }
+    } catch {
+      labels = parseList(process.env.ISSUE_LABELS);
+    }
+  }
+  if (process.env.GITHUB_EVENT_PATH && fs4.existsSync(process.env.GITHUB_EVENT_PATH)) {
+    try {
+      const eventData = JSON.parse(fs4.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
       if (eventData.issue) {
         title = eventData.issue.title || title;
         body = eventData.issue.body || body;
         issueNumber = eventData.issue.number || issueNumber;
+        if (eventData.issue.user && eventData.issue.user.login) {
+          author = eventData.issue.user.login;
+        }
+        if (Array.isArray(eventData.issue.labels)) {
+          labels = eventData.issue.labels.map((l) => typeof l === "string" ? l : l.name || "");
+        }
       }
       if (eventData.repository && eventData.repository.full_name) {
         repository = eventData.repository.full_name || repository;
@@ -50076,20 +50287,49 @@ async function runGitHubAction() {
   if (!repository) {
     throw new Error("REPOSITORY is missing from action context.");
   }
+  if (config.ignoreAuthors && config.ignoreAuthors.length > 0 && author) {
+    const isIgnoredAuthor = config.ignoreAuthors.some(
+      (ignored) => ignored.trim().toLowerCase() === author.trim().toLowerCase()
+    );
+    if (isIgnoredAuthor) {
+      console.log(`[GitHub Action] Issue #${issueNumber} opened by ignored author: "${author}". Skipping enhancement.`);
+      return;
+    }
+  }
+  if (config.ignoreLabels && config.ignoreLabels.length > 0 && labels.length > 0) {
+    const lowerLabels = labels.map((l) => l.toLowerCase());
+    const matchedLabel = config.ignoreLabels.find((il) => lowerLabels.includes(il.toLowerCase()));
+    if (matchedLabel) {
+      console.log(`[GitHub Action] Issue #${issueNumber} has ignored label: "${matchedLabel}". Skipping enhancement.`);
+      return;
+    }
+  }
   if (isAlreadyEnhanced(body)) {
     console.log(`[GitHub Action] Issue #${issueNumber} is already enhanced. Skipping to prevent loop.`);
     return;
   }
   console.log(`[GitHub Action] Processing issue #${issueNumber}: "${title}"`);
-  const { enhancedBody, modelUsed } = await enhanceIssue(title, body);
+  const { enhancedTitle, enhancedBody, modelUsed } = await enhanceIssue(title, body, {
+    model: config.geminiModel,
+    temperature: config.temperature,
+    customInstruction: config.customInstruction,
+    enhanceTitle: config.enhanceTitle
+  });
   await updateGitHubIssue({
     token: process.env.GITHUB_TOKEN,
     repository,
     issueNumber,
     originalTitle: title,
+    enhancedTitle,
     originalBody: body,
     enhancedBody,
-    modelUsed
+    modelUsed,
+    options: {
+      postComment: config.postComment,
+      preserveOriginal: config.preserveOriginal,
+      addBadge: config.addBadge,
+      addLabels: config.addLabels
+    }
   });
   console.log(`[GitHub Action] Completed enhancement for issue #${issueNumber}.`);
 }

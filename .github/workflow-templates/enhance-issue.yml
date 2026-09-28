@@ -16,5 +16,36 @@ jobs:
       - name: Enhance Issue with Gemini Flash Lite
         uses: JustJade2007/github-issue-enhancer@main
         with:
+          # =========================================================================
+          # Centralized Workflow Settings
+          # =========================================================================
+
+          # --- Required Authentication ---
           gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+          # --- Model & Generation Settings ---
+          # Specify Gemini model (default: gemini-2.5-flash-lite)
+          gemini-model: 'gemini-2.5-flash-lite'
+          # Sampling temperature (0.0 to 1.0, lower = more deterministic, default: 0.2)
+          temperature: '0.2'
+          # Optional custom instructions or domain-specific guidelines
+          custom-instruction: ''
+
+          # --- Feature Toggles ---
+          # Post an informational summary comment confirming the enhancement
+          post-comment: 'true'
+          # Include original issue submission in an expandable <details> section
+          preserve-original: 'true'
+          # Prepend [!NOTE] header badge in the enhanced issue description
+          add-badge: 'true'
+          # Clarify and reword issue title in addition to body (default: false)
+          enhance-title: 'false'
+
+          # --- Automation & Filtering ---
+          # Comma-separated labels to automatically apply to enhanced issues (e.g. 'enhanced')
+          add-labels: ''
+          # Comma-separated list of authors/bots to ignore (e.g. 'dependabot[bot],renovate[bot]')
+          ignore-authors: 'dependabot[bot],renovate[bot]'
+          # Comma-separated list of labels that skip enhancement if already present
+          ignore-labels: 'no-enhance'

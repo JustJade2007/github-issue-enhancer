@@ -1,4 +1,4 @@
-﻿import { Octokit } from "@octokit/rest";
+import { Octokit } from "@octokit/rest";
 
 const ENHANCED_MARKER = "<!-- gemini-enhanced -->";
 
@@ -13,24 +13,33 @@ export function isAlreadyEnhanced(body) {
 }
 
 /**
- * Updates a GitHub issue with the enhanced markdown body and creates a summary comment.
+ * Updates a GitHub issue with the enhanced markdown body, applies optional title changes,
+ * adds labels, and creates a summary comment based on workflow settings.
  * @param {object} params
  * @param {string} params.token - GitHub Token
  * @param {string} params.repository - "owner/repo" string
  * @param {number|string} params.issueNumber - GitHub issue number
  * @param {string} params.originalTitle - Original issue title
+ * @param {string} [params.enhancedTitle] - Optional reworded issue title
  * @param {string} params.originalBody - Original issue body
  * @param {string} params.enhancedBody - Gemini-enhanced markdown
  * @param {string} params.modelUsed - Model name used
+ * @param {object} [params.options] - Configurable workflow settings
+ * @param {boolean} [params.options.postComment=true] - Whether to post summary comment
+ * @param {boolean} [params.options.preserveOriginal=true] - Whether to include collapsible original text
+ * @param {boolean} [params.options.addBadge=true] - Whether to prepend [!NOTE] header badge
+ * @param {string[]} [params.options.addLabels=[]] - Labels to add to the issue
  */
 export async function updateGitHubIssue({
   token,
   repository,
   issueNumber,
   originalTitle,
+  enhancedTitle,
   originalBody,
   enhancedBody,
-  modelUsed
+  modelUsed,
+  options = {}
 }) {
   if (!token) {
     throw new Error("GITHUB_TOKEN is required to update GitHub issues.");
@@ -45,52 +54,107 @@ export async function updateGitHubIssue({
     throw new Error(`Invalid issue number: ${issueNumber}`);
   }
 
+  const {
+    postComment = true,
+    preserveOriginal = true,
+    addBadge = true,
+    addLabels = []
+  } = options;
+
   const octokit = new Octokit({ auth: token });
 
-  // Construct new body with tracking marker, blue alert note badge, and collapsible original submission
-  const updatedIssueBody = [
-    ENHANCED_MARKER,
-    "> [!NOTE]",
-    "> **Issue Formatted with Gemini Flash Lite**",
-    "> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.",
-    "",
-    enhancedBody,
-    "",
-    "---",
-    "<details>",
-    "<summary>🔍 <b>Original Submission</b> (Click to expand)</summary>",
-    "",
-    originalBody ? originalBody : "*(Original body was empty)*",
-    "",
-    "</details>"
-  ].join("\n");
+  // Construct new body respecting user settings
+  const bodyParts = [ENHANCED_MARKER];
 
-  console.log(`[GitHub] Updating issue #${num} in ${owner}/${repo}...`);
-  await octokit.rest.issues.update({
+  if (addBadge) {
+    bodyParts.push(
+      "> [!NOTE]",
+      "> **Issue Formatted with Gemini Flash Lite**",
+      "> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.",
+      ""
+    );
+  }
+
+  bodyParts.push(enhancedBody);
+
+  if (preserveOriginal) {
+    bodyParts.push(
+      "",
+      "---",
+      "<details>",
+      "<summary>🔍 <b>Original Submission</b> (Click to expand)</summary>",
+      "",
+      originalBody ? originalBody : "*(Original body was empty)*",
+      "",
+      "</details>"
+    );
+  }
+
+  const updatedIssueBody = bodyParts.join("\n");
+
+  const updatePayload = {
     owner,
     repo,
     issue_number: num,
     body: updatedIssueBody
-  });
+  };
+
+  const hasTitleUpdate = Boolean(enhancedTitle && enhancedTitle !== originalTitle);
+  if (hasTitleUpdate) {
+    updatePayload.title = enhancedTitle;
+  }
+
+  console.log(`[GitHub] Updating issue #${num} in ${owner}/${repo}...`);
+  await octokit.rest.issues.update(updatePayload);
   console.log(`[GitHub] Successfully updated issue #${num} description.`);
 
-  // Post a summary comment on the issue with blue alert style
-  const commentContent = [
-    "> [!NOTE]",
-    "> ### 🤖 Issue Formatted with Gemini Flash Lite",
-    "> This issue description was automatically reworded and structured for clarity and readability without adding any new content or assumptions.",
-    "",
-    `- **Model Used:** \`${modelUsed}\``,
-    "- **Changes:** Reworded and organized into standard GitHub issue format.",
-    "- **Original Content:** Preserved and accessible via the collapsible dropdown in the description above."
-  ].join("\n");
+  // Apply optional labels if configured
+  if (Array.isArray(addLabels) && addLabels.length > 0) {
+    try {
+      console.log(`[GitHub] Adding configured label(s) to issue #${num}: ${addLabels.join(", ")}`);
+      await octokit.rest.issues.addLabels({
+        owner,
+        repo,
+        issue_number: num,
+        labels: addLabels
+      });
+      console.log(`[GitHub] Successfully added labels to issue #${num}.`);
+    } catch (lblErr) {
+      console.warn(`[GitHub] Warning: Failed to apply labels to issue #${num}:`, lblErr.message);
+    }
+  }
 
-  console.log(`[GitHub] Posting summary comment to issue #${num}...`);
-  await octokit.rest.issues.createComment({
-    owner,
-    repo,
-    issue_number: num,
-    body: commentContent
-  });
-  console.log(`[GitHub] Successfully posted comment to issue #${num}.`);
+  // Post summary comment if enabled in settings
+  if (postComment) {
+    const commentLines = [
+      "> [!NOTE]",
+      "> ### 🤖 Issue Formatted with Gemini Flash Lite",
+      "> This issue description was automatically reworded and structured for clarity and readability without adding any new content or assumptions.",
+      "",
+      `- **Model Used:** \`${modelUsed}\``,
+      "- **Changes:** Reworded and organized into standard GitHub issue format."
+    ];
+
+    if (hasTitleUpdate) {
+      commentLines.push(`- **Title Clarified:** "${originalTitle}" → "${enhancedTitle}"`);
+    }
+
+    if (preserveOriginal) {
+      commentLines.push("- **Original Content:** Preserved and accessible via the collapsible dropdown in the description above.");
+    }
+
+    const commentContent = commentLines.join("\n");
+
+    console.log(`[GitHub] Posting summary comment to issue #${num}...`);
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: num,
+      body: commentContent
+    });
+    console.log(`[GitHub] Successfully posted comment to issue #${num}.`);
+  } else {
+    console.log(`[GitHub] Skipping summary comment on issue #${num} (post-comment is disabled).`);
+  }
 }
+
