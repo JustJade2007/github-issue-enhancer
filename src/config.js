@@ -1,7 +1,7 @@
 import fs from "fs";
 
 export const DEFAULT_CONFIG = {
-  geminiModel: "gemini-2.5-flash-lite",
+  geminiModel: "gemini-3.1-flash-lite",
   temperature: 0.2,
   customInstruction: "",
   postComment: true,

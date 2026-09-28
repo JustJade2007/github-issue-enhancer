@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-09-27
+
+### Changed
+- **Updated Baseline Model:** Set `gemini-3.1-flash-lite` as the standard default model across workflow definitions, templates, configuration defaults, action metadata, and environment templates.
+- **Removed Deprecated Legacy Models:** Removed fallback references to models older than `gemini-3.1-flash-lite` (dropping obsolete `gemini-2.5-flash-lite`, `gemini-2.0-flash-lite`, and `gemini-1.5-flash`), establishing `gemini-3.1-flash-lite` as the current minimum/oldest supported model.
+
 ## [0.2.0] - 2026-09-27
 
 ### Added

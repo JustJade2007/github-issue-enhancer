@@ -22913,7 +22913,7 @@ import readline from "readline";
 // src/config.js
 import fs from "fs";
 var DEFAULT_CONFIG = {
-  geminiModel: "gemini-2.5-flash-lite",
+  geminiModel: "gemini-3.1-flash-lite",
   temperature: 0.2,
   customInstruction: "",
   postComment: true,
@@ -46374,10 +46374,7 @@ STRICT CONSTRAINTS:
 var DEFAULT_MODELS = [
   process.env.GEMINI_MODEL,
   "gemini-3.1-flash-lite",
-  "gemini-3.1-flash-lite-preview",
-  "gemini-2.5-flash-lite",
-  "gemini-2.0-flash-lite",
-  "gemini-1.5-flash"
+  "gemini-3.1-flash-lite-preview"
 ].filter(Boolean);
 async function enhanceIssue(title, body, options = {}) {
   const apiKey = process.env.GEMINI_API_KEY;

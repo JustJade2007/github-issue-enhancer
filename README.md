@@ -13,7 +13,7 @@ An automated GitHub workflow and CLI utility powered by Google Gemini Flash Lite
 - **Multi-Repo Reusable Action:** Packaged as a standard GitHub Action (`action.yml`) so any repository on GitHub can consume it with a self-contained workflow file.
 - **Zero-Dependency Runner:** Pre-bundled with `dist/index.mjs` so downstream repos do not need to run `npm install`, provide a `package-lock.json`, or contain Node.js code.
 - **Loop & Duplicate Protection:** Uses metadata markers (`<!-- gemini-enhanced -->`) to avoid repeated formatting or execution loops.
-- **Model Support & Fallback:** Configured for `gemini-2.5-flash-lite` / `gemini-3.1-flash-lite` with automatic fallback handling.
+- **Model Support & Fallback:** Powered by `gemini-3.1-flash-lite` (the baseline model) with automatic fallback handling.
 - **Local Testing:** Test directly on your local machine using interactive prompts or CLI flags via `run.bat` or `node src/index.js`.
 
 ---
@@ -54,8 +54,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
           # --- Model & Generation Settings ---
-          # Specify Gemini model (default: gemini-2.5-flash-lite)
-          gemini-model: 'gemini-2.5-flash-lite'
+          # Specify Gemini model (default: gemini-3.1-flash-lite)
+          gemini-model: 'gemini-3.1-flash-lite'
           # Sampling temperature (0.0 to 1.0, lower = higher fidelity, default: 0.2)
           temperature: '0.2'
           # Optional custom guidelines or domain-specific formatting rules
@@ -105,7 +105,7 @@ The table below outlines all available settings under `with:`:
 | :--- | :--- | :--- | :--- |
 | `gemini-api-key` | string | **(Required)** | Google Gemini API Key. |
 | `github-token` | string | `${{ github.token }}` | GitHub token with `issues: write` permission. |
-| `gemini-model` | string | `'gemini-2.5-flash-lite'` | Gemini model identifier to invoke. |
+| `gemini-model` | string | `'gemini-3.1-flash-lite'` | Gemini model identifier to invoke (baseline oldest supported is `gemini-3.1-flash-lite`). |
 | `temperature` | number / string | `'0.2'` | Sampling temperature (between 0.0 and 1.0). Lower values enforce strict adherence. |
 | `custom-instruction` | string | `''` | Optional extra formatting guidelines or project rules for Gemini. |
 | `post-comment` | boolean / string | `'true'` | Toggles posting the informational summary comment on the issue. |
@@ -122,7 +122,7 @@ In addition to workflow `with:` inputs, settings can also be defined in a `.gith
 
 ```json
 {
-  "geminiModel": "gemini-2.5-flash-lite",
+  "geminiModel": "gemini-3.1-flash-lite",
   "temperature": 0.2,
   "postComment": true,
   "preserveOriginal": true,
