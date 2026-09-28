@@ -1,0 +1,20 @@
+name: Enhance New Issue
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  enhance-issue:
+    name: Reword and Format Issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enhance Issue with Gemini Flash Lite
+        uses: JustJade2007/github-issue-enhancer@main
+        with:
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

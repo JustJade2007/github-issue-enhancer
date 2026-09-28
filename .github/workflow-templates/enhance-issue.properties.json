@@ -1,0 +1,12 @@
+{
+  "name": "GitHub Issue Enhancer",
+  "description": "Rewords and formats new GitHub issues using Gemini Flash Lite without adding new content.",
+  "iconName": "alert-circle",
+  "categories": [
+    "Automation"
+  ],
+  "filePatterns": [
+    ".github/workflows/enhance-issue.yml",
+    ".github/workflows/*.yml"
+  ]
+}

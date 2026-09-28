@@ -55,6 +55,14 @@ jobs:
 
 That's all! The action executes self-contained via its pre-bundled distribution and requires no `package.json`, `package-lock.json`, or code checkout in the target repository.
 
+### Marketplace Integration & `blank.yml`
+When adding this action via GitHub Actions Marketplace or clicking **"Set up a workflow yourself"**, GitHub creates an empty file named `blank.yml` and opens the Marketplace sidebar. 
+
+> [!NOTE]
+> The GitHub Marketplace sidebar displays only a single step snippet (`- name: ... uses: ...`). A step snippet by itself cannot run without the surrounding workflow triggers (`on: issues`), permissions (`issues: write`), and job declaration. 
+
+To resolve this, replace the entire content of `blank.yml` (or rename it to `.github/workflows/enhance-issue.yml`) with the complete workflow code shown in **Step 1** above. Alternatively, you can use the ready-made workflow template located at `.github/workflow-templates/enhance-issue.yml`.
+
 ---
 
 ## Repository Structure
@@ -62,23 +70,26 @@ That's all! The action executes self-contained via its pre-bundled distribution 
 ```
 github-issue-enhancer/
 ├── .github/
+│   ├── workflow-templates/
+│   │   ├── enhance-issue.yml          # GitHub Actions starter workflow template
+│   │   └── enhance-issue.properties.json # Marketplace template metadata
 │   └── workflows/
-│       └── enhance-issue.yml  # Out-of-the-box issue trigger workflow
-├── action.yml                 # Reusable GitHub Action definition
+│       └── enhance-issue.yml          # Out-of-the-box issue trigger workflow
+├── action.yml                         # Reusable GitHub Action definition
 ├── dist/
-│   └── index.mjs              # Standalone bundled executable (zero dependencies)
+│   └── index.mjs                      # Standalone bundled executable (zero dependencies)
 ├── scripts/
-│   └── build.js               # Build & bundling script using esbuild
+│   └── build.js                       # Build & bundling script using esbuild
 ├── src/
-│   ├── gemini.js              # Gemini API client & strict prompt constraints
-│   ├── github.js              # Octokit issue updater & comment poster
-│   └── index.js               # Main runner (GitHub Action + CLI)
-├── CHANGELOG.md               # Dated project changelog
-├── SECURITY.md                # Security & secret management policy
-├── README.md                  # Project documentation
-├── run.bat                    # Windows launch & test script
-├── package.json               # Node.js project manifest (v0.1.1)
-└── .gitignore                 # Ignored dependencies & secrets
+│   ├── gemini.js                      # Gemini API client & strict prompt constraints
+│   ├── github.js                      # Octokit issue updater & comment poster
+│   └── index.js                       # Main runner (GitHub Action + CLI)
+├── CHANGELOG.md                       # Dated project changelog
+├── SECURITY.md                        # Security & secret management policy
+├── README.md                          # Project documentation
+├── run.bat                            # Windows launch & test script
+├── package.json                       # Node.js project manifest (v0.1.2)
+└── .gitignore                         # Ignored dependencies & secrets
 ```
 
 ---

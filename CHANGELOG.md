@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-09-27
+
+### Added
+- Added official GitHub Actions starter workflow template `.github/workflow-templates/enhance-issue.yml` and metadata manifest `.github/workflow-templates/enhance-issue.properties.json` for GitHub Marketplace and repository starter workflow discovery.
+
+### Fixed
+- Fixed empty `.yml` file issue when adding through the marketplace: provided complete workflow template and clear guidance resolving the GitHub web editor limitation where adding an action from the Marketplace sidebar generates a `blank.yml` containing only an isolated step snippet without mandatory job triggers or permissions.
+
+### Changed
+- Documented Marketplace integration walkthrough and `blank.yml` resolution in `README.md`.
+- Updated `.gitignore` with `.antigravity/` and `*.local` ignore rules.
+- Bumped package version to `0.1.2`.
+
 ## [0.1.1] - 2026-09-27
 
 ### Fixed
