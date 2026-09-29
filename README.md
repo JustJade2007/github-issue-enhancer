@@ -9,7 +9,7 @@ An automated GitHub workflow and CLI utility powered by Google Gemini Flash Lite
 - **Automated Workflow:** Triggers immediately whenever an issue is opened (`issues: [opened]`).
 - **Two-Fold Enhancement:**
   1. Updates the issue body with structured markdown while preserving the raw text in an expandable `<details>` section for transparency.
-  2. Posts a status comment confirming the issue has been formatted with Gemini Flash Lite.
+  2. Posts a comment with brief, practical instructions for contributors wanting to fix the issue (only posted if applicable; otherwise no comment is left).
 - **Multi-Repo Reusable Action:** Packaged as a standard GitHub Action (`action.yml`) so any repository on GitHub can consume it with a self-contained workflow file.
 - **Zero-Dependency Runner:** Pre-bundled with `dist/index.mjs` so downstream repos do not need to run `npm install`, provide a `package-lock.json`, or contain Node.js code.
 - **Loop & Duplicate Protection:** Uses metadata markers (`<!-- gemini-enhanced -->`) to avoid repeated formatting or execution loops.
@@ -62,7 +62,7 @@ jobs:
           custom-instruction: ''
 
           # --- Feature Toggles ---
-          # Post an informational summary comment confirming the enhancement
+          # Post brief contributor instructions on how to fix the issue (only posted if applicable)
           post-comment: 'true'
           # Include original issue submission in an expandable <details> section
           preserve-original: 'true'
@@ -108,7 +108,7 @@ The table below outlines all available settings under `with:`:
 | `gemini-model` | string | `'gemini-3.1-flash-lite'` | Gemini model identifier to invoke (baseline oldest supported is `gemini-3.1-flash-lite`). |
 | `temperature` | number / string | `'0.2'` | Sampling temperature (between 0.0 and 1.0). Lower values enforce strict adherence. |
 | `custom-instruction` | string | `''` | Optional extra formatting guidelines or project rules for Gemini. |
-| `post-comment` | boolean / string | `'true'` | Toggles posting the informational summary comment on the issue. |
+| `post-comment` | boolean / string | `'true'` | Toggles posting contributor fix instructions as a comment (only posted if applicable). |
 | `preserve-original` | boolean / string | `'true'` | Toggles appending the original raw issue submission in an expandable `<details>` dropdown. |
 | `add-badge` | boolean / string | `'true'` | Toggles prepending the `> [!NOTE]` header banner at the top of the issue. |
 | `enhance-title` | boolean / string | `'false'` | Toggles rewording and clarifying the issue title in addition to the issue body. |

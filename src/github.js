@@ -14,7 +14,7 @@ export function isAlreadyEnhanced(body) {
 
 /**
  * Updates a GitHub issue with the enhanced markdown body, applies optional title changes,
- * adds labels, and creates a summary comment based on workflow settings.
+ * adds labels, and posts contributor fix instructions as a comment if applicable.
  * @param {object} params
  * @param {string} params.token - GitHub Token
  * @param {string} params.repository - "owner/repo" string
@@ -23,9 +23,10 @@ export function isAlreadyEnhanced(body) {
  * @param {string} [params.enhancedTitle] - Optional reworded issue title
  * @param {string} params.originalBody - Original issue body
  * @param {string} params.enhancedBody - Gemini-enhanced markdown
+ * @param {string} [params.fixInstructions] - Optional brief instructions to fix the issue
  * @param {string} params.modelUsed - Model name used
  * @param {object} [params.options] - Configurable workflow settings
- * @param {boolean} [params.options.postComment=true] - Whether to post summary comment
+ * @param {boolean} [params.options.postComment=true] - Whether to post comment if applicable
  * @param {boolean} [params.options.preserveOriginal=true] - Whether to include collapsible original text
  * @param {boolean} [params.options.addBadge=true] - Whether to prepend [!NOTE] header badge
  * @param {string[]} [params.options.addLabels=[]] - Labels to add to the issue
@@ -38,6 +39,7 @@ export async function updateGitHubIssue({
   enhancedTitle,
   originalBody,
   enhancedBody,
+  fixInstructions,
   modelUsed,
   options = {}
 }) {
@@ -124,37 +126,32 @@ export async function updateGitHubIssue({
     }
   }
 
-  // Post summary comment if enabled in settings
+  // Post comment with contributor fix instructions if enabled and applicable
   if (postComment) {
-    const commentLines = [
-      "> [!NOTE]",
-      "> ### 🤖 Issue Formatted with Gemini Flash Lite",
-      "> This issue description was automatically reworded and structured for clarity and readability without adding any new content or assumptions.",
-      "",
-      `- **Model Used:** \`${modelUsed}\``,
-      "- **Changes:** Reworded and organized into standard GitHub issue format."
-    ];
+    if (fixInstructions && fixInstructions.trim()) {
+      const commentLines = [
+        "> [!TIP]",
+        "> ### 💡 Instructions to Fix This Issue",
+        "> Here are brief instructions to help anyone interested in resolving this issue:",
+        "",
+        fixInstructions.trim()
+      ];
 
-    if (hasTitleUpdate) {
-      commentLines.push(`- **Title Clarified:** "${originalTitle}" → "${enhancedTitle}"`);
+      const commentContent = commentLines.join("\n");
+
+      console.log(`[GitHub] Posting contributor fix instructions comment to issue #${num}...`);
+      await octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: num,
+        body: commentContent
+      });
+      console.log(`[GitHub] Successfully posted fix instructions comment to issue #${num}.`);
+    } else {
+      console.log(`[GitHub] Contributor fix instructions not applicable for issue #${num}. Skipping comment.`);
     }
-
-    if (preserveOriginal) {
-      commentLines.push("- **Original Content:** Preserved and accessible via the collapsible dropdown in the description above.");
-    }
-
-    const commentContent = commentLines.join("\n");
-
-    console.log(`[GitHub] Posting summary comment to issue #${num}...`);
-    await octokit.rest.issues.createComment({
-      owner,
-      repo,
-      issue_number: num,
-      body: commentContent
-    });
-    console.log(`[GitHub] Successfully posted comment to issue #${num}.`);
   } else {
-    console.log(`[GitHub] Skipping summary comment on issue #${num} (post-comment is disabled).`);
+    console.log(`[GitHub] Skipping comment on issue #${num} (post-comment is disabled).`);
   }
 }
 

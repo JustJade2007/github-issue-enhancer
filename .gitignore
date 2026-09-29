@@ -24,3 +24,14 @@ Thumbs.db
 antigravity/
 .antigravity/
 *.local
+
+# TODO files
+TODO
+TODO.md
+*.todo
+
+# Keys and credentials reference
+keys.md
+KEYS.md
+keys.txt
+

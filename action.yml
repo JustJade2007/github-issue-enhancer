@@ -25,7 +25,7 @@ inputs:
     required: false
     default: ''
   post-comment:
-    description: 'Whether to post an informational confirmation comment (true/false)'
+    description: 'Whether to post a comment with contributor fix instructions if applicable (true/false)'
     required: false
     default: 'true'
   preserve-original:

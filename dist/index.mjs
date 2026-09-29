@@ -12,20 +12,11 @@ var __require = /* @__PURE__ */ ((x2) => typeof require !== "undefined" ? requir
   if (typeof require !== "undefined") return require.apply(this, arguments);
   throw Error('Dynamic require of "' + x2 + '" is not supported');
 });
-var __esm = (fn, res, err) => function __init() {
-  if (err) throw err[0];
-  try {
-    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-  } catch (e2) {
-    throw err = [e2], e2;
-  }
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
 };
 var __commonJS = (cb, mod) => function __require2() {
-  try {
-    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-  } catch (e2) {
-    throw mod = 0, e2;
-  }
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
 var __export = (target, all) => {
   for (var name in all)
@@ -983,7 +974,7 @@ var require_common = __commonJS({
     var extend_1 = __importDefault(require_extend());
     var util_cjs_1 = __importDefault(require_util());
     var pkg = util_cjs_1.default.pkg;
-    exports.GAXIOS_ERROR_SYMBOL = /* @__PURE__ */ Symbol.for(`${pkg.name}-gaxios-error`);
+    exports.GAXIOS_ERROR_SYMBOL = Symbol.for(`${pkg.name}-gaxios-error`);
     var GaxiosError = class _GaxiosError extends Error {
       config;
       response;
@@ -2087,7 +2078,7 @@ var require_dist = __commonJS({
     var http3 = __importStar(__require("http"));
     var https_1 = __require("https");
     __exportStar(require_helpers(), exports);
-    var INTERNAL = /* @__PURE__ */ Symbol("AgentBaseInternalState");
+    var INTERNAL = Symbol("AgentBaseInternalState");
     var Agent = class extends http3.Agent {
       constructor(opts) {
         super(opts);
@@ -2658,11 +2649,11 @@ var require_ponyfill_es2018 = __commonJS({
           return front._elements[cursor];
         }
       }
-      const AbortSteps = /* @__PURE__ */ Symbol("[[AbortSteps]]");
-      const ErrorSteps = /* @__PURE__ */ Symbol("[[ErrorSteps]]");
-      const CancelSteps = /* @__PURE__ */ Symbol("[[CancelSteps]]");
-      const PullSteps = /* @__PURE__ */ Symbol("[[PullSteps]]");
-      const ReleaseSteps = /* @__PURE__ */ Symbol("[[ReleaseSteps]]");
+      const AbortSteps = Symbol("[[AbortSteps]]");
+      const ErrorSteps = Symbol("[[ErrorSteps]]");
+      const CancelSteps = Symbol("[[CancelSteps]]");
+      const PullSteps = Symbol("[[PullSteps]]");
+      const ReleaseSteps = Symbol("[[ReleaseSteps]]");
       function ReadableStreamReaderGenericInitialize(reader, stream) {
         reader._ownerReadableStream = stream;
         stream._reader = reader;
@@ -7726,7 +7717,7 @@ var init_body = __esm({
     init_base();
     init_is();
     pipeline = promisify(Stream.pipeline);
-    INTERNALS = /* @__PURE__ */ Symbol("Body internals");
+    INTERNALS = Symbol("Body internals");
     Body = class {
       constructor(body, {
         size = 0
@@ -8096,7 +8087,7 @@ var init_headers = __esm({
       /**
        * For better console.log(headers) and also to convert Headers into Node.js Request compatible format
        */
-      [/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")]() {
+      [Symbol.for("nodejs.util.inspect.custom")]() {
         return [...this.keys()].reduce((result, key) => {
           const values = this.getAll(key);
           if (key === "host") {
@@ -8136,7 +8127,7 @@ var init_response = __esm({
     init_headers();
     init_body();
     init_is_redirect();
-    INTERNALS2 = /* @__PURE__ */ Symbol("Response internals");
+    INTERNALS2 = Symbol("Response internals");
     Response2 = class _Response extends Body {
       constructor(body = null, options = {}) {
         super(body, options);
@@ -8426,7 +8417,7 @@ var init_request = __esm({
     init_is();
     init_get_search();
     init_referrer();
-    INTERNALS3 = /* @__PURE__ */ Symbol("Request internals");
+    INTERNALS3 = Symbol("Request internals");
     isRequest = (object) => {
       return typeof object === "object" && typeof object[INTERNALS3] === "object";
     };
@@ -8607,7 +8598,7 @@ var init_request = __esm({
         path: parsedURL.pathname + search,
         // The following options are not expressed in the URL
         method: request2.method,
-        headers: headers[/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")](),
+        headers: headers[Symbol.for("nodejs.util.inspect.custom")](),
         insecureHTTPParser: request2.insecureHTTPParser,
         agent
       };
@@ -12696,8 +12687,8 @@ var require_authclient = __commonJS({
        * making an RPC call, for logging purposes, as well as a string ID that can be
        * used to correlate calls and responses.
        */
-      static RequestMethodNameSymbol = /* @__PURE__ */ Symbol("request method name");
-      static RequestLogIdSymbol = /* @__PURE__ */ Symbol("request log id");
+      static RequestMethodNameSymbol = Symbol("request method name");
+      static RequestLogIdSymbol = Symbol("request log id");
       constructor(opts = {}) {
         super();
         const options = (0, util_1.originalOrCamelOptions)(opts);
@@ -17907,7 +17898,7 @@ var require_gdchclient = __commonJS({
           }
         };
       }
-      [/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")]() {
+      [Symbol.for("nodejs.util.inspect.custom")]() {
         return this.toJSON();
       }
       base64UrlEncode(str) {
@@ -19142,10 +19133,10 @@ var require_constants = __commonJS({
       EMPTY_BUFFER: Buffer.alloc(0),
       GUID: "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",
       hasBlob,
-      kForOnEventAttribute: /* @__PURE__ */ Symbol("kIsForOnEventAttribute"),
-      kListener: /* @__PURE__ */ Symbol("kListener"),
-      kStatusCode: /* @__PURE__ */ Symbol("status-code"),
-      kWebSocket: /* @__PURE__ */ Symbol("websocket"),
+      kForOnEventAttribute: Symbol("kIsForOnEventAttribute"),
+      kListener: Symbol("kListener"),
+      kStatusCode: Symbol("status-code"),
+      kWebSocket: Symbol("websocket"),
       NOOP: () => {
       }
     };
@@ -19231,8 +19222,8 @@ var require_buffer_util = __commonJS({
 var require_limiter = __commonJS({
   "node_modules/ws/lib/limiter.js"(exports, module) {
     "use strict";
-    var kDone = /* @__PURE__ */ Symbol("kDone");
-    var kRun = /* @__PURE__ */ Symbol("kRun");
+    var kDone = Symbol("kDone");
+    var kRun = Symbol("kRun");
     var Limiter = class {
       /**
        * Creates a new `Limiter`.
@@ -19287,11 +19278,11 @@ var require_permessage_deflate = __commonJS({
     var { kStatusCode } = require_constants();
     var FastBuffer = Buffer[Symbol.species];
     var TRAILER = Buffer.from([0, 0, 255, 255]);
-    var kPerMessageDeflate = /* @__PURE__ */ Symbol("permessage-deflate");
-    var kTotalLength = /* @__PURE__ */ Symbol("total-length");
-    var kCallback = /* @__PURE__ */ Symbol("callback");
-    var kBuffers = /* @__PURE__ */ Symbol("buffers");
-    var kError = /* @__PURE__ */ Symbol("error");
+    var kPerMessageDeflate = Symbol("permessage-deflate");
+    var kTotalLength = Symbol("total-length");
+    var kCallback = Symbol("callback");
+    var kBuffers = Symbol("buffers");
+    var kError = Symbol("error");
     var zlibLimiter;
     var PerMessageDeflate2 = class {
       /**
@@ -20497,7 +20488,7 @@ var require_sender = __commonJS({
     var { EMPTY_BUFFER, kWebSocket, NOOP } = require_constants();
     var { isBlob: isBlob2, isValidStatusCode } = require_validation();
     var { mask: applyMask, toBuffer } = require_buffer_util();
-    var kByteLength = /* @__PURE__ */ Symbol("kByteLength");
+    var kByteLength = Symbol("kByteLength");
     var maskBuffer = Buffer.alloc(4);
     var RANDOM_POOL_SIZE = 8 * 1024;
     var randomPool;
@@ -20982,14 +20973,14 @@ var require_event_target = __commonJS({
   "node_modules/ws/lib/event-target.js"(exports, module) {
     "use strict";
     var { kForOnEventAttribute, kListener } = require_constants();
-    var kCode = /* @__PURE__ */ Symbol("kCode");
-    var kData = /* @__PURE__ */ Symbol("kData");
-    var kError = /* @__PURE__ */ Symbol("kError");
-    var kMessage = /* @__PURE__ */ Symbol("kMessage");
-    var kReason = /* @__PURE__ */ Symbol("kReason");
-    var kTarget = /* @__PURE__ */ Symbol("kTarget");
-    var kType = /* @__PURE__ */ Symbol("kType");
-    var kWasClean = /* @__PURE__ */ Symbol("kWasClean");
+    var kCode = Symbol("kCode");
+    var kData = Symbol("kData");
+    var kError = Symbol("kError");
+    var kMessage = Symbol("kMessage");
+    var kReason = Symbol("kReason");
+    var kTarget = Symbol("kTarget");
+    var kType = Symbol("kType");
+    var kWasClean = Symbol("kWasClean");
     var Event = class {
       /**
        * Create a new `Event`.
@@ -21391,7 +21382,7 @@ var require_websocket = __commonJS({
     } = require_event_target();
     var { format, parse: parse2 } = require_extension();
     var { toBuffer } = require_buffer_util();
-    var kAborted = /* @__PURE__ */ Symbol("kAborted");
+    var kAborted = Symbol("kAborted");
     var protocolVersions = [8, 13];
     var readyStates = ["CONNECTING", "OPEN", "CLOSING", "CLOSED"];
     var subprotocolRegex = /^[!#$%&'*+\-.0-9A-Z^_`|a-z~]+$/;
@@ -34103,7 +34094,7 @@ var VERTEX_AI_API_DEFAULT_VERSION = "v1beta1";
 var GOOGLE_AI_API_DEFAULT_VERSION = "v1beta";
 var MULTI_REGIONAL_LOCATIONS = /* @__PURE__ */ new Set(["us", "eu"]);
 function raiseUndiciTimeouts(timeout) {
-  const dispatcherSymbol = /* @__PURE__ */ Symbol.for("undici.globalDispatcher.1");
+  const dispatcherSymbol = Symbol.for("undici.globalDispatcher.1");
   const globalDispatcher = globalThis[dispatcherSymbol];
   if (!globalDispatcher) {
     return;
@@ -46362,20 +46353,72 @@ function getApiKeyFromEnv() {
 
 // src/gemini.js
 var SYSTEM_INSTRUCTION = `You are an expert GitHub issue formatter and technical rewording assistant.
-Your task is to take an issue title and description and reword/expand it into a clean, professional, and well-structured GitHub issue format WITHOUT ADDING NEW CONTENT, ASSUMPTIONS, OR FABRICATIONS.
+Your task is twofold:
+1. Re-format and reword the issue title and description into a clean, professional, and well-structured GitHub issue format WITHOUT ADDING NEW CONTENT, ASSUMPTIONS, OR FABRICATIONS to the issue description.
+2. If applicable, provide brief, actionable instructions/guidance for anyone who wants to fix or address the issue.
 
-STRICT CONSTRAINTS:
-1. STRICTLY NO NEW CONTENT: Do NOT hallucinate, invent, or assume any new facts, symptoms, reproduction steps, technical solutions, error logs, environment details, or requirements that the user did not explicitly state or provide.
-2. DO NOT GUESS SOLUTIONS: If the author only describes a bug or an idea, do not invent code fixes or technical architectures unless the author explicitly proposed them.
-3. REWORD FOR CLARITY: Turn informal, rushed, shorthand, or fragmented sentences into articulate, grammatical, and professional technical English.
-4. EXPAND STRUCTURALLY: Reorganize messy, brief, or unstructured thoughts into clean markdown sections (e.g., Summary / Overview, Details, Observed Context / Notes) without adding unmentioned information.
-5. PRESERVE ORIGINAL ARTIFACTS: Preserve all code snippets, terminal commands, stack traces, URLs, file paths, versions, and usernames VERBATIM in appropriate markdown code blocks.
-6. OUTPUT ONLY MARKDOWN: Return strictly the formatted markdown text for the issue description. Do not wrap in conversational chit-chat, meta explanations, or greetings.`;
+STRICT CONSTRAINTS FOR THE ISSUE BODY:
+1. STRICTLY NO NEW CONTENT IN ISSUE BODY: Do NOT hallucinate, invent, or assume any new facts, symptoms, reproduction steps, technical solutions, error logs, environment details, or requirements that the author did not explicitly state or provide.
+2. REWORD FOR CLARITY: Turn informal, rushed, shorthand, or fragmented sentences into articulate, grammatical, and professional technical English.
+3. EXPAND STRUCTURALLY: Reorganize messy, brief, or unstructured thoughts into clean markdown sections (e.g., Summary / Overview, Details, Observed Context / Notes) without adding unmentioned information.
+4. PRESERVE ORIGINAL ARTIFACTS: Preserve all code snippets, terminal commands, stack traces, URLs, file paths, versions, and usernames VERBATIM in appropriate markdown code blocks.
+
+GUIDELINES FOR FIX INSTRUCTIONS:
+1. APPLICABILITY: Only provide fix instructions if the issue represents an actionable bug, defect, feature request, or technical task where reasonable, practical guidance can be derived from the issue description.
+2. WHEN NOT APPLICABLE: If the issue is a general question, open-ended discussion, announcement, duplicate, invalid/incomprehensible, or completely lacks sufficient technical context to give meaningful guidance, you MUST output strictly "NOT_APPLICABLE" under FIX_INSTRUCTIONS.
+3. BRIEF & ACTIONABLE: When applicable, keep instructions concise (bulleted steps, typically 2-4 points). Focus on:
+   - Probable area or component to inspect based on the context.
+   - Key steps or considerations for a contributor to implement the fix.
+   - How to test or verify the resolution.
+4. TONE: Direct, helpful, and targeted at a developer or contributor wanting to resolve the issue.`;
 var DEFAULT_MODELS = [
   process.env.GEMINI_MODEL,
   "gemini-3.1-flash-lite",
   "gemini-3.1-flash-lite-preview"
 ].filter(Boolean);
+function normalizeFixInstructions(text) {
+  if (!text) return null;
+  const trimmed = text.trim();
+  const cleaned = trimmed.replace(/^[\s*_-]+|[\s*_-]+$/g, "");
+  const lower2 = cleaned.toLowerCase();
+  if (!lower2 || lower2 === "not_applicable" || lower2 === "not applicable" || lower2 === "not applicable." || lower2 === "n/a" || lower2 === "none" || lower2 === "none." || lower2.startsWith("not_applicable") || lower2.startsWith("not applicable")) {
+    return null;
+  }
+  return trimmed;
+}
+function parseGeminiResponse(rawText, enhanceTitle = false) {
+  let enhancedTitle = null;
+  let enhancedBody = rawText;
+  let fixInstructions = null;
+  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|$)/i);
+  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|$)/i);
+  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)$/i);
+  if (enhanceTitle && titleMatch && titleMatch[1].trim()) {
+    enhancedTitle = titleMatch[1].trim();
+  }
+  if (bodyMatch && bodyMatch[1].trim()) {
+    enhancedBody = bodyMatch[1].trim();
+  } else if (!bodyMatch && (titleMatch || fixMatch)) {
+    let cleaned = rawText;
+    if (titleMatch) cleaned = cleaned.replace(titleMatch[0], "");
+    if (fixMatch) cleaned = cleaned.replace(fixMatch[0], "");
+    enhancedBody = cleaned.trim();
+  } else if (!bodyMatch && !titleMatch && !fixMatch) {
+    const legacyMatch = rawText.match(/^TITLE:\s*(.+?)(?:\r?\n)+BODY:\s*([\s\S]+)$/i);
+    if (legacyMatch) {
+      if (enhanceTitle) enhancedTitle = legacyMatch[1].trim();
+      enhancedBody = legacyMatch[2].trim();
+    }
+  }
+  if (fixMatch && fixMatch[1].trim()) {
+    fixInstructions = normalizeFixInstructions(fixMatch[1]);
+  }
+  return {
+    enhancedTitle,
+    enhancedBody,
+    fixInstructions
+  };
+}
 async function enhanceIssue(title, body, options = {}) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -46394,19 +46437,33 @@ ${customInstruction.trim()}`;
   }
   let prompt = "";
   if (enhanceTitle) {
-    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure. Clarify both the title and the body without adding any new facts, assumptions, reproduction steps, or content that was not in the original issue.
+    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure, and provide brief fix instructions if applicable.
 
-Return your response strictly in the following format:
-TITLE: <rewritten clear, concise, and professional issue title>
-BODY:
-<rewritten markdown issue description>
+Return your response strictly in the following format with the exact delimiter tags:
+
+===ENHANCED_TITLE===
+<rewritten clear, concise, and professional issue title>
+
+===ENHANCED_BODY===
+<rewritten markdown issue description without adding new facts or assumptions>
+
+===FIX_INSTRUCTIONS===
+<brief, practical instructions for anyone who wants to fix this issue, OR strictly 'NOT_APPLICABLE' if instructions are not applicable or if there is insufficient context>
 
 Issue Title: ${title || "(No title provided)"}
 
 Issue Content:
 ${body || "(No description provided)"}`;
   } else {
-    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure. Do not add any new facts, assumptions, reproduction steps, or content that was not in the original issue.
+    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure, and provide brief fix instructions if applicable.
+
+Return your response strictly in the following format with the exact delimiter tags:
+
+===ENHANCED_BODY===
+<rewritten markdown issue description without adding new facts or assumptions>
+
+===FIX_INSTRUCTIONS===
+<brief, practical instructions for anyone who wants to fix this issue, OR strictly 'NOT_APPLICABLE' if instructions are not applicable or if there is insufficient context>
 
 Issue Title: ${title || "(No title provided)"}
 
@@ -46430,20 +46487,12 @@ ${body || "(No description provided)"}`;
       });
       if (response && response.text) {
         const rawText = response.text.trim();
-        console.log(`[Gemini] Successfully formatted issue using model: ${model}`);
-        if (enhanceTitle) {
-          const match2 = rawText.match(/^TITLE:\s*(.+?)(?:\r?\n)+BODY:\s*([\s\S]+)$/i);
-          if (match2) {
-            return {
-              enhancedTitle: match2[1].trim(),
-              enhancedBody: match2[2].trim(),
-              modelUsed: model
-            };
-          }
-        }
+        console.log(`[Gemini] Successfully formatted issue and generated instructions with model: ${model}`);
+        const parsed = parseGeminiResponse(rawText, enhanceTitle);
         return {
-          enhancedTitle: null,
-          enhancedBody: rawText,
+          enhancedTitle: parsed.enhancedTitle,
+          enhancedBody: parsed.enhancedBody,
+          fixInstructions: parsed.fixInstructions,
           modelUsed: model
         };
       }
@@ -46554,7 +46603,7 @@ function bindApi(hook2, state, name) {
   });
 }
 function Singular() {
-  const singularHookName = /* @__PURE__ */ Symbol("Singular");
+  const singularHookName = Symbol("Singular");
   const singularHookState = {
     registry: {}
   };
@@ -50016,6 +50065,7 @@ async function updateGitHubIssue({
   enhancedTitle,
   originalBody,
   enhancedBody,
+  fixInstructions,
   modelUsed,
   options = {}
 }) {
@@ -50088,31 +50138,28 @@ async function updateGitHubIssue({
     }
   }
   if (postComment) {
-    const commentLines = [
-      "> [!NOTE]",
-      "> ### \u{1F916} Issue Formatted with Gemini Flash Lite",
-      "> This issue description was automatically reworded and structured for clarity and readability without adding any new content or assumptions.",
-      "",
-      `- **Model Used:** \`${modelUsed}\``,
-      "- **Changes:** Reworded and organized into standard GitHub issue format."
-    ];
-    if (hasTitleUpdate) {
-      commentLines.push(`- **Title Clarified:** "${originalTitle}" \u2192 "${enhancedTitle}"`);
+    if (fixInstructions && fixInstructions.trim()) {
+      const commentLines = [
+        "> [!TIP]",
+        "> ### \u{1F4A1} Instructions to Fix This Issue",
+        "> Here are brief instructions to help anyone interested in resolving this issue:",
+        "",
+        fixInstructions.trim()
+      ];
+      const commentContent = commentLines.join("\n");
+      console.log(`[GitHub] Posting contributor fix instructions comment to issue #${num}...`);
+      await octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: num,
+        body: commentContent
+      });
+      console.log(`[GitHub] Successfully posted fix instructions comment to issue #${num}.`);
+    } else {
+      console.log(`[GitHub] Contributor fix instructions not applicable for issue #${num}. Skipping comment.`);
     }
-    if (preserveOriginal) {
-      commentLines.push("- **Original Content:** Preserved and accessible via the collapsible dropdown in the description above.");
-    }
-    const commentContent = commentLines.join("\n");
-    console.log(`[GitHub] Posting summary comment to issue #${num}...`);
-    await octokit.rest.issues.createComment({
-      owner,
-      repo,
-      issue_number: num,
-      body: commentContent
-    });
-    console.log(`[GitHub] Successfully posted comment to issue #${num}.`);
   } else {
-    console.log(`[GitHub] Skipping summary comment on issue #${num} (post-comment is disabled).`);
+    console.log(`[GitHub] Skipping comment on issue #${num} (post-comment is disabled).`);
   }
 }
 
@@ -50175,7 +50222,7 @@ Options:
   --temperature <val>          Sampling temperature (0.0 - 1.0)
   --custom-instruction <txt>   Custom formatting guidelines or rules
   --enhance-title              Enable title rewording & clarification
-  --no-comment                 Disable posting summary comments
+  --no-comment                 Disable posting contributor fix instructions comment
   --no-original                Disable appending original submission block
   --no-badge                   Disable [!NOTE] header callout badge
   --add-labels <labels>        Comma-separated labels to apply
@@ -50208,7 +50255,7 @@ Options:
 Enhancing issue with Gemini (Model: ${config.geminiModel}, Temp: ${config.temperature})...
 `);
   try {
-    const { enhancedTitle, enhancedBody, modelUsed } = await enhanceIssue(title, body, {
+    const { enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
       model: config.geminiModel,
       temperature: config.temperature,
       customInstruction: config.customInstruction,
@@ -50233,6 +50280,18 @@ Enhanced Title: ${enhancedTitle}
       console.log("\n</details>");
     }
     console.log("\n==========================================");
+    if (config.postComment) {
+      console.log("  CONTRIBUTOR FIX INSTRUCTIONS (COMMENT)");
+      console.log("==========================================");
+      if (fixInstructions) {
+        console.log("> [!TIP]");
+        console.log("> ### \u{1F4A1} Instructions to Fix This Issue\n");
+        console.log(fixInstructions);
+      } else {
+        console.log("*(No comment would be posted: fix instructions not applicable for this issue)*");
+      }
+      console.log("==========================================");
+    }
   } catch (error) {
     console.error("Enhancement failed:", error.message);
     process.exit(1);
@@ -50306,7 +50365,7 @@ async function runGitHubAction() {
     return;
   }
   console.log(`[GitHub Action] Processing issue #${issueNumber}: "${title}"`);
-  const { enhancedTitle, enhancedBody, modelUsed } = await enhanceIssue(title, body, {
+  const { enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
     model: config.geminiModel,
     temperature: config.temperature,
     customInstruction: config.customInstruction,
@@ -50320,6 +50379,7 @@ async function runGitHubAction() {
     enhancedTitle,
     originalBody: body,
     enhancedBody,
+    fixInstructions,
     modelUsed,
     options: {
       postComment: config.postComment,

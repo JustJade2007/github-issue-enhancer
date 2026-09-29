@@ -65,7 +65,7 @@ Options:
   --temperature <val>          Sampling temperature (0.0 - 1.0)
   --custom-instruction <txt>   Custom formatting guidelines or rules
   --enhance-title              Enable title rewording & clarification
-  --no-comment                 Disable posting summary comments
+  --no-comment                 Disable posting contributor fix instructions comment
   --no-original                Disable appending original submission block
   --no-badge                   Disable [!NOTE] header callout badge
   --add-labels <labels>        Comma-separated labels to apply
@@ -101,7 +101,7 @@ Options:
 
   console.log(`\nEnhancing issue with Gemini (Model: ${config.geminiModel}, Temp: ${config.temperature})...\n`);
   try {
-    const { enhancedTitle, enhancedBody, modelUsed } = await enhanceIssue(title, body, {
+    const { enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
       model: config.geminiModel,
       temperature: config.temperature,
       customInstruction: config.customInstruction,
@@ -129,6 +129,19 @@ Options:
     }
 
     console.log("\n==========================================");
+
+    if (config.postComment) {
+      console.log("  CONTRIBUTOR FIX INSTRUCTIONS (COMMENT)");
+      console.log("==========================================");
+      if (fixInstructions) {
+        console.log("> [!TIP]");
+        console.log("> ### 💡 Instructions to Fix This Issue\n");
+        console.log(fixInstructions);
+      } else {
+        console.log("*(No comment would be posted: fix instructions not applicable for this issue)*");
+      }
+      console.log("==========================================");
+    }
   } catch (error) {
     console.error("Enhancement failed:", error.message);
     process.exit(1);
@@ -217,7 +230,7 @@ async function runGitHubAction() {
   }
 
   console.log(`[GitHub Action] Processing issue #${issueNumber}: "${title}"`);
-  const { enhancedTitle, enhancedBody, modelUsed } = await enhanceIssue(title, body, {
+  const { enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
     model: config.geminiModel,
     temperature: config.temperature,
     customInstruction: config.customInstruction,
@@ -232,6 +245,7 @@ async function runGitHubAction() {
     enhancedTitle,
     originalBody: body,
     enhancedBody,
+    fixInstructions,
     modelUsed,
     options: {
       postComment: config.postComment,

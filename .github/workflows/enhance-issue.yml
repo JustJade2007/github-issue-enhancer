@@ -33,7 +33,7 @@ jobs:
           custom-instruction: ''
 
           # --- Feature Toggles ---
-          # Post an informational summary comment confirming the enhancement
+          # Post brief contributor instructions on how to fix the issue (only posted if applicable)
           post-comment: 'true'
           # Include original issue submission in an expandable <details> section
           preserve-original: 'true'

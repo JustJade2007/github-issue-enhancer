@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-09-29
+
+### Added
+- **Contributor Fix Instructions in Comments:** When an issue is opened, Gemini now generates brief, practical instructions/guidance for anyone looking to fix or resolve the issue, and posts it as a comment.
+- **Applicability Filter:** Fix instructions are only generated and posted if applicable to the issue (e.g. actionable bugs, defects, features). If the issue is a question, discussion, non-actionable, or lacks sufficient context, no comment is posted.
+- **Single-Call Gemini Prompting:** Issue rewording and contributor fix instructions are generated in a unified API call with structured delimiters (`===ENHANCED_BODY===`, `===FIX_INSTRUCTIONS===`), minimizing token and API consumption.
+
 ## [0.2.1] - 2026-09-27
 
 ### Changed

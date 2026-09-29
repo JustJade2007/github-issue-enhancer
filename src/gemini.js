@@ -1,15 +1,24 @@
 import { GoogleGenAI } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `You are an expert GitHub issue formatter and technical rewording assistant.
-Your task is to take an issue title and description and reword/expand it into a clean, professional, and well-structured GitHub issue format WITHOUT ADDING NEW CONTENT, ASSUMPTIONS, OR FABRICATIONS.
+Your task is twofold:
+1. Re-format and reword the issue title and description into a clean, professional, and well-structured GitHub issue format WITHOUT ADDING NEW CONTENT, ASSUMPTIONS, OR FABRICATIONS to the issue description.
+2. If applicable, provide brief, actionable instructions/guidance for anyone who wants to fix or address the issue.
 
-STRICT CONSTRAINTS:
-1. STRICTLY NO NEW CONTENT: Do NOT hallucinate, invent, or assume any new facts, symptoms, reproduction steps, technical solutions, error logs, environment details, or requirements that the user did not explicitly state or provide.
-2. DO NOT GUESS SOLUTIONS: If the author only describes a bug or an idea, do not invent code fixes or technical architectures unless the author explicitly proposed them.
-3. REWORD FOR CLARITY: Turn informal, rushed, shorthand, or fragmented sentences into articulate, grammatical, and professional technical English.
-4. EXPAND STRUCTURALLY: Reorganize messy, brief, or unstructured thoughts into clean markdown sections (e.g., Summary / Overview, Details, Observed Context / Notes) without adding unmentioned information.
-5. PRESERVE ORIGINAL ARTIFACTS: Preserve all code snippets, terminal commands, stack traces, URLs, file paths, versions, and usernames VERBATIM in appropriate markdown code blocks.
-6. OUTPUT ONLY MARKDOWN: Return strictly the formatted markdown text for the issue description. Do not wrap in conversational chit-chat, meta explanations, or greetings.`;
+STRICT CONSTRAINTS FOR THE ISSUE BODY:
+1. STRICTLY NO NEW CONTENT IN ISSUE BODY: Do NOT hallucinate, invent, or assume any new facts, symptoms, reproduction steps, technical solutions, error logs, environment details, or requirements that the author did not explicitly state or provide.
+2. REWORD FOR CLARITY: Turn informal, rushed, shorthand, or fragmented sentences into articulate, grammatical, and professional technical English.
+3. EXPAND STRUCTURALLY: Reorganize messy, brief, or unstructured thoughts into clean markdown sections (e.g., Summary / Overview, Details, Observed Context / Notes) without adding unmentioned information.
+4. PRESERVE ORIGINAL ARTIFACTS: Preserve all code snippets, terminal commands, stack traces, URLs, file paths, versions, and usernames VERBATIM in appropriate markdown code blocks.
+
+GUIDELINES FOR FIX INSTRUCTIONS:
+1. APPLICABILITY: Only provide fix instructions if the issue represents an actionable bug, defect, feature request, or technical task where reasonable, practical guidance can be derived from the issue description.
+2. WHEN NOT APPLICABLE: If the issue is a general question, open-ended discussion, announcement, duplicate, invalid/incomprehensible, or completely lacks sufficient technical context to give meaningful guidance, you MUST output strictly "NOT_APPLICABLE" under FIX_INSTRUCTIONS.
+3. BRIEF & ACTIONABLE: When applicable, keep instructions concise (bulleted steps, typically 2-4 points). Focus on:
+   - Probable area or component to inspect based on the context.
+   - Key steps or considerations for a contributor to implement the fix.
+   - How to test or verify the resolution.
+4. TONE: Direct, helpful, and targeted at a developer or contributor wanting to resolve the issue.`;
 
 const DEFAULT_MODELS = [
   process.env.GEMINI_MODEL,
@@ -18,7 +27,79 @@ const DEFAULT_MODELS = [
 ].filter(Boolean);
 
 /**
- * Rewords and formats an issue using Gemini Flash Lite without adding new content.
+ * Normalizes fix instructions text, returning null if not applicable or empty.
+ * @param {string} text
+ * @returns {string|null}
+ */
+export function normalizeFixInstructions(text) {
+  if (!text) return null;
+  const trimmed = text.trim();
+  const cleaned = trimmed.replace(/^[\s*_-]+|[\s*_-]+$/g, "");
+  const lower = cleaned.toLowerCase();
+  if (
+    !lower ||
+    lower === "not_applicable" ||
+    lower === "not applicable" ||
+    lower === "not applicable." ||
+    lower === "n/a" ||
+    lower === "none" ||
+    lower === "none." ||
+    lower.startsWith("not_applicable") ||
+    lower.startsWith("not applicable")
+  ) {
+    return null;
+  }
+  return trimmed;
+}
+
+/**
+ * Parses Gemini response extracting enhanced title, enhanced body, and fix instructions.
+ * @param {string} rawText
+ * @param {boolean} enhanceTitle
+ * @returns {{ enhancedTitle: string|null, enhancedBody: string, fixInstructions: string|null }}
+ */
+export function parseGeminiResponse(rawText, enhanceTitle = false) {
+  let enhancedTitle = null;
+  let enhancedBody = rawText;
+  let fixInstructions = null;
+
+  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|$)/i);
+  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|$)/i);
+  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)$/i);
+
+  if (enhanceTitle && titleMatch && titleMatch[1].trim()) {
+    enhancedTitle = titleMatch[1].trim();
+  }
+
+  if (bodyMatch && bodyMatch[1].trim()) {
+    enhancedBody = bodyMatch[1].trim();
+  } else if (!bodyMatch && (titleMatch || fixMatch)) {
+    let cleaned = rawText;
+    if (titleMatch) cleaned = cleaned.replace(titleMatch[0], "");
+    if (fixMatch) cleaned = cleaned.replace(fixMatch[0], "");
+    enhancedBody = cleaned.trim();
+  } else if (!bodyMatch && !titleMatch && !fixMatch) {
+    const legacyMatch = rawText.match(/^TITLE:\s*(.+?)(?:\r?\n)+BODY:\s*([\s\S]+)$/i);
+    if (legacyMatch) {
+      if (enhanceTitle) enhancedTitle = legacyMatch[1].trim();
+      enhancedBody = legacyMatch[2].trim();
+    }
+  }
+
+  if (fixMatch && fixMatch[1].trim()) {
+    fixInstructions = normalizeFixInstructions(fixMatch[1]);
+  }
+
+  return {
+    enhancedTitle,
+    enhancedBody,
+    fixInstructions
+  };
+}
+
+/**
+ * Rewords and formats an issue using Gemini Flash Lite without adding new content to the body,
+ * and generates brief contributor fix instructions if applicable.
  * @param {string} title - The issue title
  * @param {string} body - The raw issue body
  * @param {object} [options={}] - Configurable options
@@ -26,7 +107,7 @@ const DEFAULT_MODELS = [
  * @param {number} [options.temperature] - Temperature (0.0 - 1.0)
  * @param {string} [options.customInstruction] - Custom guidelines
  * @param {boolean} [options.enhanceTitle] - Whether to reword title
- * @returns {Promise<{ enhancedTitle: string|null, enhancedBody: string, modelUsed: string }>}
+ * @returns {Promise<{ enhancedTitle: string|null, enhancedBody: string, fixInstructions: string|null, modelUsed: string }>}
  */
 export async function enhanceIssue(title, body, options = {}) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -50,19 +131,38 @@ export async function enhanceIssue(title, body, options = {}) {
 
   let prompt = "";
   if (enhanceTitle) {
-    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure. Clarify both the title and the body without adding any new facts, assumptions, reproduction steps, or content that was not in the original issue.
+    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure, and provide brief fix instructions if applicable.
 
-Return your response strictly in the following format:
-TITLE: <rewritten clear, concise, and professional issue title>
-BODY:
-<rewritten markdown issue description>
+Return your response strictly in the following format with the exact delimiter tags:
+
+===ENHANCED_TITLE===
+<rewritten clear, concise, and professional issue title>
+
+===ENHANCED_BODY===
+<rewritten markdown issue description without adding new facts or assumptions>
+
+===FIX_INSTRUCTIONS===
+<brief, practical instructions for anyone who wants to fix this issue, OR strictly 'NOT_APPLICABLE' if instructions are not applicable or if there is insufficient context>
 
 Issue Title: ${title || "(No title provided)"}
 
 Issue Content:
 ${body || "(No description provided)"}`;
   } else {
-    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure. Do not add any new facts, assumptions, reproduction steps, or content that was not in the original issue.\n\nIssue Title: ${title || "(No title provided)"}\n\nIssue Content:\n${body || "(No description provided)"}`;
+    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure, and provide brief fix instructions if applicable.
+
+Return your response strictly in the following format with the exact delimiter tags:
+
+===ENHANCED_BODY===
+<rewritten markdown issue description without adding new facts or assumptions>
+
+===FIX_INSTRUCTIONS===
+<brief, practical instructions for anyone who wants to fix this issue, OR strictly 'NOT_APPLICABLE' if instructions are not applicable or if there is insufficient context>
+
+Issue Title: ${title || "(No title provided)"}
+
+Issue Content:
+${body || "(No description provided)"}`;
   }
 
   // Deduplicate model candidates
@@ -85,22 +185,13 @@ ${body || "(No description provided)"}`;
 
       if (response && response.text) {
         const rawText = response.text.trim();
-        console.log(`[Gemini] Successfully formatted issue using model: ${model}`);
+        console.log(`[Gemini] Successfully formatted issue and generated instructions with model: ${model}`);
 
-        if (enhanceTitle) {
-          const match = rawText.match(/^TITLE:\s*(.+?)(?:\r?\n)+BODY:\s*([\s\S]+)$/i);
-          if (match) {
-            return {
-              enhancedTitle: match[1].trim(),
-              enhancedBody: match[2].trim(),
-              modelUsed: model
-            };
-          }
-        }
-
+        const parsed = parseGeminiResponse(rawText, enhanceTitle);
         return {
-          enhancedTitle: null,
-          enhancedBody: rawText,
+          enhancedTitle: parsed.enhancedTitle,
+          enhancedBody: parsed.enhancedBody,
+          fixInstructions: parsed.fixInstructions,
           modelUsed: model
         };
       }
