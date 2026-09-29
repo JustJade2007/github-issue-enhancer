@@ -8,7 +8,8 @@ on:
 
 permissions:
   issues: write
-  contents: read
+  contents: write
+  repository-projects: write
 
 jobs:
   enhance-issue:
@@ -51,3 +52,21 @@ jobs:
           ignore-authors: 'dependabot[bot],renovate[bot]'
           # Comma-separated list of labels that skip enhancement if already present
           ignore-labels: 'no-enhance'
+
+          # --- Triage, Assignment, Milestones & Branches ---
+          # Automatically assign repository owner or designated assignees (default: false)
+          auto-assign: 'false'
+          # Comma-separated GitHub usernames to assign (optional)
+          assignees: ''
+          # Milestone to associate (e.g. 'v1.0.0' or 'auto' for Gemini auto-selection)
+          milestone: ''
+          # Automatically create and link a development branch for this issue (default: false)
+          create-branch: 'false'
+          # Branch prefix for development branch creation (default: 'issue-')
+          branch-prefix: 'issue-'
+
+          # --- GitHub Projects v2 Management ---
+          # Project URL (e.g. 'https://github.com/orgs/my-org/projects/1')
+          project-url: ''
+          # Optional token with project:write scope (defaults to github-token)
+          project-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
