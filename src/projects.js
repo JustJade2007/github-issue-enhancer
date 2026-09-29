@@ -348,7 +348,11 @@ export async function assignIssueToProject({
 
     return { itemId };
   } catch (err) {
-    console.warn(`[Project] Warning: Failed to assign issue to project:`, err.message);
+    if (err.message && err.message.includes("Resource not accessible by integration")) {
+      console.warn(`[Project] Warning: GitHub Actions default GITHUB_TOKEN cannot write to User-level Projects (${projectIdent.owner}). To add issues to user projects, create a Personal Access Token (PAT) with 'project' scope, add it as repository secret 'PROJECT_TOKEN', and set 'project-token: \${{ secrets.PROJECT_TOKEN }}' in the workflow.`);
+    } else {
+      console.warn(`[Project] Warning: Failed to assign issue to project:`, err.message);
+    }
     return null;
   }
 }

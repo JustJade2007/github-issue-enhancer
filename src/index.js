@@ -76,7 +76,14 @@ function promptLine(question) {
 
 function resolveAssignees({ repository, config, labels, title, body }) {
   const [owner] = repository ? repository.split("/") : [""];
-  const assigneesSet = new Set(config.assignees || []);
+  // Filter out special keywords like 'auto' or 'none' from literal username list
+  const filteredAssignees = (config.assignees || []).filter(
+    (a) => a && a.toLowerCase() !== "auto" && a.toLowerCase() !== "none"
+  );
+  const assigneesSet = new Set(filteredAssignees);
+  const wantsAutoAssign =
+    Boolean(config.autoAssign) ||
+    (config.assignees || []).some((a) => a && a.toLowerCase() === "auto");
 
   if (Array.isArray(config.assignmentRules)) {
     const textToMatch = `${title} ${body}`.toLowerCase();
@@ -101,7 +108,9 @@ function resolveAssignees({ repository, config, labels, title, body }) {
     }
   }
 
-  if (config.autoAssign && assigneesSet.size === 0 && owner) {
+  // If auto-assign is requested and no explicit/rule assignees were added, assign the repo owner
+  if (wantsAutoAssign && assigneesSet.size === 0 && owner) {
+    console.log(`[GitHub Action] Auto-assigning issue to repository owner: "${owner}".`);
     assigneesSet.add(owner);
   }
 
@@ -111,6 +120,11 @@ function resolveAssignees({ repository, config, labels, title, body }) {
 function resolveMilestone({ config, candidateMilestones, recommendedMilestone }) {
   if (!config.milestone) return null;
 
+  if (!candidateMilestones || candidateMilestones.length === 0) {
+    console.log("[GitHub Action] Note: Repository has no open milestones created. Skipping milestone assignment.");
+    return null;
+  }
+
   const milestoneSetting = String(config.milestone).trim();
 
   if (milestoneSetting.toLowerCase() === "auto") {
@@ -118,7 +132,11 @@ function resolveMilestone({ config, candidateMilestones, recommendedMilestone })
     const match = candidateMilestones.find(
       (m) => m.title.toLowerCase() === recommendedMilestone.toLowerCase()
     );
-    return match ? match.number : null;
+    if (!match) {
+      console.log(`[GitHub Action] AI recommendation "${recommendedMilestone}" did not match any open milestone.`);
+      return null;
+    }
+    return match.number;
   }
 
   const asNumber = parseInt(milestoneSetting, 10);

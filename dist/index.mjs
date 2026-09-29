@@ -50433,7 +50433,11 @@ async function assignIssueToProject({
     }
     return { itemId };
   } catch (err) {
-    console.warn(`[Project] Warning: Failed to assign issue to project:`, err.message);
+    if (err.message && err.message.includes("Resource not accessible by integration")) {
+      console.warn(`[Project] Warning: GitHub Actions default GITHUB_TOKEN cannot write to User-level Projects (${projectIdent.owner}). To add issues to user projects, create a Personal Access Token (PAT) with 'project' scope, add it as repository secret 'PROJECT_TOKEN', and set 'project-token: \${{ secrets.PROJECT_TOKEN }}' in the workflow.`);
+    } else {
+      console.warn(`[Project] Warning: Failed to assign issue to project:`, err.message);
+    }
     return null;
   }
 }
@@ -50805,7 +50809,11 @@ function promptLine(question) {
 }
 function resolveAssignees({ repository, config, labels, title, body }) {
   const [owner] = repository ? repository.split("/") : [""];
-  const assigneesSet = new Set(config.assignees || []);
+  const filteredAssignees = (config.assignees || []).filter(
+    (a) => a && a.toLowerCase() !== "auto" && a.toLowerCase() !== "none"
+  );
+  const assigneesSet = new Set(filteredAssignees);
+  const wantsAutoAssign = Boolean(config.autoAssign) || (config.assignees || []).some((a) => a && a.toLowerCase() === "auto");
   if (Array.isArray(config.assignmentRules)) {
     const textToMatch = `${title} ${body}`.toLowerCase();
     const currentLabels = (labels || []).map((l) => l.toLowerCase());
@@ -50825,20 +50833,29 @@ function resolveAssignees({ repository, config, labels, title, body }) {
       }
     }
   }
-  if (config.autoAssign && assigneesSet.size === 0 && owner) {
+  if (wantsAutoAssign && assigneesSet.size === 0 && owner) {
+    console.log(`[GitHub Action] Auto-assigning issue to repository owner: "${owner}".`);
     assigneesSet.add(owner);
   }
   return Array.from(assigneesSet);
 }
 function resolveMilestone({ config, candidateMilestones, recommendedMilestone }) {
   if (!config.milestone) return null;
+  if (!candidateMilestones || candidateMilestones.length === 0) {
+    console.log("[GitHub Action] Note: Repository has no open milestones created. Skipping milestone assignment.");
+    return null;
+  }
   const milestoneSetting = String(config.milestone).trim();
   if (milestoneSetting.toLowerCase() === "auto") {
     if (!recommendedMilestone) return null;
     const match3 = candidateMilestones.find(
       (m2) => m2.title.toLowerCase() === recommendedMilestone.toLowerCase()
     );
-    return match3 ? match3.number : null;
+    if (!match3) {
+      console.log(`[GitHub Action] AI recommendation "${recommendedMilestone}" did not match any open milestone.`);
+      return null;
+    }
+    return match3.number;
   }
   const asNumber = parseInt(milestoneSetting, 10);
   if (!isNaN(asNumber) && String(asNumber) === milestoneSetting) {
