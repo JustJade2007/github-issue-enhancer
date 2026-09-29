@@ -40,7 +40,7 @@ jobs:
           # Prepend [!NOTE] header badge in the enhanced issue description
           add-badge: 'true'
           # Clarify and reword issue title in addition to body (default: false)
-          enhance-title: 'false'
+          enhance-title: 'true'
 
           # --- Automation & Filtering ---
           # Comma-separated labels to automatically apply to enhanced issues (e.g. 'enhanced')
