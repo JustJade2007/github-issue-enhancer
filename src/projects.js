@@ -1,4 +1,39 @@
 import { Octokit } from "@octokit/rest";
+import { execSync } from "child_process";
+
+/**
+ * Detects the type of GitHub authentication token.
+ * @param {string} token
+ * @returns {'none'|'actions_runner_token'|'fine_grained_pat'|'classic_pat'|'custom'}
+ */
+export function detectTokenKind(token) {
+  if (!token) return "none";
+  if (token.startsWith("ghs_")) return "actions_runner_token";
+  if (token.startsWith("github_pat_")) return "fine_grained_pat";
+  if (token.startsWith("ghp_")) return "classic_pat";
+  return "custom";
+}
+
+/**
+ * Returns a human-friendly description of the detected token type.
+ * @param {string} token
+ * @returns {string}
+ */
+export function describeTokenKind(token) {
+  const kind = detectTokenKind(token);
+  switch (kind) {
+    case "none":
+      return "None (empty)";
+    case "actions_runner_token":
+      return "GitHub Actions default runner token (GITHUB_TOKEN / ghs_...)";
+    case "fine_grained_pat":
+      return "Fine-Grained Personal Access Token (github_pat_...)";
+    case "classic_pat":
+      return "Classic Personal Access Token (ghp_...)";
+    default:
+      return `Custom Token (length: ${token.length})`;
+  }
+}
 
 /**
  * Parses GitHub Project URL or parameters into owner type, owner name, and project number.
@@ -204,6 +239,8 @@ export function matchSelectOption(options, targetValue) {
  * @param {object} params
  * @param {string} params.token - GitHub / Project Personal Access Token
  * @param {string} params.issueNodeId - GraphQL node ID of the issue
+ * @param {string} [params.repository] - Owner/repo string (e.g. 'JustJade2007/issue-enhancer-test')
+ * @param {string|number} [params.issueNumber] - Issue number
  * @param {string} [params.projectUrl] - URL of the GitHub project
  * @param {string|number} [params.projectNumber] - Project number
  * @param {string} [params.projectOwner] - Project owner (org or user)
@@ -216,6 +253,8 @@ export function matchSelectOption(options, targetValue) {
 export async function assignIssueToProject({
   token,
   issueNodeId,
+  repository,
+  issueNumber,
   projectUrl,
   projectNumber,
   projectOwner,
@@ -235,30 +274,68 @@ export async function assignIssueToProject({
     return null;
   }
 
+  const tokenKind = detectTokenKind(token);
+  console.log(`[Project] Authentication token detected: ${describeTokenKind(token)}.`);
+
+  if (projectIdent.ownerType === "user" && tokenKind === "actions_runner_token") {
+    console.warn(
+      `[Project] Warning: Target project "${projectIdent.owner}/${projectIdent.number}" is a User-level Project. Default GitHub Actions runner token (GITHUB_TOKEN) does not have permission to modify user-owned projects. Ensure secret 'PROJECT_TOKEN' is set in repository settings with a Classic PAT (project scope).`
+    );
+  }
+
   try {
     const octokit = new Octokit({ auth: token });
     console.log(`[Project] Locating GitHub Project #${projectIdent.number} (${projectIdent.owner})...`);
     const projectDetails = await getProjectV2Details(octokit, projectIdent);
     console.log(`[Project] Found project "${projectDetails.title}" (ID: ${projectDetails.id}).`);
 
-    // Add item to project
-    const addItemMutation = `
-      mutation addItem($projectId: ID!, $contentId: ID!) {
-        addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
-          item {
-            id
+    let itemId = null;
+
+    // Strategy 1: Attempt via GitHub CLI ('gh project item-add') if repository and issueNumber are available
+    if (repository && issueNumber) {
+      try {
+        const issueUrl = `https://github.com/${repository}/issues/${issueNumber}`;
+        console.log(`[Project] Attempting to add issue to project via GitHub CLI ('gh project item-add')...`);
+        const stdout = execSync(
+          `gh project item-add ${projectIdent.number} --owner "${projectIdent.owner}" --url "${issueUrl}" --format json`,
+          {
+            encoding: "utf8",
+            env: { ...process.env, GH_TOKEN: token, GITHUB_TOKEN: token },
+            stdio: ["pipe", "pipe", "pipe"]
+          }
+        );
+        const parsed = JSON.parse(stdout);
+        if (parsed?.id) {
+          itemId = parsed.id;
+          console.log(`[Project] Successfully added issue to project via GitHub CLI (Item ID: ${itemId}).`);
+        }
+      } catch (cliErr) {
+        const cliMsg = (cliErr.stderr || cliErr.message || "").trim();
+        console.log(`[Project] Note: GitHub CLI item-add returned: ${cliMsg || "error"}. Attempting GraphQL mutation...`);
+      }
+    }
+
+    // Strategy 2: Direct GraphQL mutation addProjectV2ItemById
+    if (!itemId) {
+      const addItemMutation = `
+        mutation addItem($projectId: ID!, $contentId: ID!) {
+          addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+            item {
+              id
+            }
           }
         }
-      }
-    `;
+      `;
 
-    console.log(`[Project] Adding issue to project "${projectDetails.title}"...`);
-    const addResult = await octokit.graphql(addItemMutation, {
-      projectId: projectDetails.id,
-      contentId: issueNodeId
-    });
+      console.log(`[Project] Adding issue to project "${projectDetails.title}" via GraphQL mutation...`);
+      const addResult = await octokit.graphql(addItemMutation, {
+        projectId: projectDetails.id,
+        contentId: issueNodeId
+      });
 
-    const itemId = addResult?.addProjectV2ItemById?.item?.id;
+      itemId = addResult?.addProjectV2ItemById?.item?.id;
+    }
+
     if (!itemId) {
       console.warn("[Project] Warning: Failed to obtain project item ID after adding issue.");
       return null;
@@ -349,7 +426,19 @@ export async function assignIssueToProject({
     return { itemId };
   } catch (err) {
     if (err.message && err.message.includes("Resource not accessible by integration")) {
-      console.warn(`[Project] Warning: GitHub Actions default GITHUB_TOKEN cannot write to User-level Projects (${projectIdent.owner}). To add issues to user projects, create a Personal Access Token (PAT) with 'project' scope, add it as repository secret 'PROJECT_TOKEN', and set 'project-token: \${{ secrets.PROJECT_TOKEN }}' in the workflow.`);
+      if (tokenKind === "fine_grained_pat") {
+        console.warn(
+          `[Project] Warning: A Fine-Grained Personal Access Token (github_pat_...) was provided. GitHub currently does NOT support Fine-Grained PATs for user-owned Projects (v2) like "${projectIdent.owner}/${projectIdent.number}". To fix this, create a Classic Personal Access Token (ghp_...) with the 'project' scope, save it as secret 'PROJECT_TOKEN', and set 'project-token: \${{ secrets.PROJECT_TOKEN }}'.`
+        );
+      } else if (tokenKind === "actions_runner_token") {
+        console.warn(
+          `[Project] Warning: GitHub Actions default GITHUB_TOKEN cannot write to User-level Projects (${projectIdent.owner}). To add issues to user projects, create a Classic Personal Access Token (PAT) with 'project' scope, add it as repository secret 'PROJECT_TOKEN' in repository "${repository || 'target repository'}", and set 'project-token: \${{ secrets.PROJECT_TOKEN }}' in the workflow.`
+        );
+      } else {
+        console.warn(
+          `[Project] Warning: Permission denied ("Resource not accessible by integration") for user project "${projectIdent.owner}/${projectIdent.number}". Verify that the token has the 'project' scope (and 'repo' scope) checked in GitHub Developer Settings.`
+        );
+      }
     } else {
       console.warn(`[Project] Warning: Failed to assign issue to project:`, err.message);
     }

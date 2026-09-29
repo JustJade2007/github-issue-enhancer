@@ -543,6 +543,8 @@ async function runGitHubAction() {
     await assignIssueToProject({
       token: config.projectToken || githubToken,
       issueNodeId,
+      repository,
+      issueNumber,
       projectUrl: config.projectUrl,
       projectNumber: config.projectNumber,
       projectOwner: config.projectOwner,

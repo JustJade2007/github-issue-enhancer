@@ -113,7 +113,7 @@ jobs:
 ### Step 2: Add Secrets to the Target Repository
 1. Go to your repository's **Settings > Secrets and variables > Actions > New repository secret**.
 2. **`GEMINI_API_KEY`**: Your Google Gemini API key.
-3. *(Optional)* **`PROJECT_TOKEN`** or **`GH_PAT`**: If organizing issues into User-level Projects v2 (`github.com/users/.../projects/...`) or if elevated permissions are required.
+3. *(Optional)* **`PROJECT_TOKEN`** or **`GH_PAT`**: If organizing issues into User-level Projects v2 (`github.com/users/.../projects/...`). **Important:** For User-level projects, this token must be a **Classic Personal Access Token (`ghp_...`)** with the `project` scope (and `repo` scope). GitHub does not support Fine-Grained PATs or the default `GITHUB_TOKEN` for user-owned projects. Ensure this secret is added under the repository where the workflow runs.
 
 > [!TIP]
 > **GitHub Secret Naming Restriction:** GitHub does **not** allow custom repository secret names starting with `GITHUB_` (such as `GITHUB_PAT` or `GITHUB_TOKEN`). When saving custom tokens, always use valid names such as `GH_PAT`, `PAT_TOKEN`, or `PROJECT_TOKEN`.

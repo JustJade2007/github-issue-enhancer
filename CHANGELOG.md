@@ -6,7 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - **Automated AI Triage & Dynamic Labeling:** Dynamically fetches existing repository labels and prompts Gemini to select appropriate labels based on issue content and scope, merging them with any configured static labels.
-- **GitHub Projects v2 Organization:** Seamlessly assigns new issues to a configured GitHub Project v2 via GraphQL, automatically classifying and setting custom single-select or text fields for **Priority** (P0-P3, Urgent/High/Medium/Low) and **Size** (XS, S, M, L, XL).
+- **GitHub Projects v2 Organization:** Seamlessly assigns new issues to a configured GitHub Project v2 via GraphQL and GitHub CLI fallback (`gh project item-add`), automatically classifying and setting custom single-select or text fields for **Priority** (P0-P3, Urgent/High/Medium/Low) and **Size** (XS, S, M, L, XL).
+- **Project Token Diagnostics:** Automatically detects and diagnoses token types (`ghs_` default Actions runner token, `github_pat_` fine-grained PAT, and `ghp_` classic PAT), providing clear actionable guidance on GitHub's API requirements for User-owned Projects v2.
 - **Conditional User Assignment:** When `auto-assign: true` or `assignees` is specified, automatically assigns the repository owner or designated developers. Supports custom keyword and label assignment rules defined in `.github/issue-enhancer.json`.
 - **Milestone Association:** Associates issues with an explicit milestone or allows Gemini to automatically select the most relevant open repository milestone when set to `auto`.
 - **Development Branch Creation & Linking:** When `create-branch: true` is configured, automatically creates a dedicated development branch (`issue-{number}-{kebab-title}`) from the repository's default branch and associates it with the issue via GraphQL `createLinkedBranch`.
