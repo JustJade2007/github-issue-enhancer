@@ -1,14 +1,19 @@
 # GitHub Issue Enhancer
 
-An automated GitHub workflow and CLI utility powered by Google Gemini Flash Lite that rewords, clarifies, and formats new repository issues into clean, professional GitHub issue markdown **without adding new content, assumptions, or hallucinations**.
+An automated GitHub workflow and CLI utility powered by Google Gemini Flash Lite that rewords, clarifies, and formats new repository issues into clean, professional GitHub issue markdown **without adding new content, assumptions, or hallucinations**, while automating **triage labeling, user assignment, GitHub Projects v2 organization, milestone assignment, and development branch creation**.
 
 ## Features
 
 - **Strict Content Fidelity:** Reorganizes messy or shorthand descriptions into clean GitHub Flavored Markdown (Summary, Details, Context, Logs) while strictly preserving original technical boundaries and without inventing steps or solutions.
-- **Issue Thoroughness Detection:** Automatically evaluates new issues upon creation. If an issue is already thorough and well-explained (more than 2 well-written descriptive paragraphs or equivalent clear structure), the action preserves the author's original title and body, only posting contributor fix instructions as a comment if applicable.
+- **Issue Thoroughness Detection:** Automatically evaluates new issues upon creation. If an issue is already thorough and well-explained (more than 2 well-written descriptive paragraphs or equivalent clear structure), the action preserves the author's original title and body, only updating triage metadata and posting contributor fix instructions if applicable.
+- **Automated AI Triage & Dynamic Labeling:** Dynamically fetches existing repository labels and uses Gemini to analyze the issue and select appropriate matching labels (such as bug, frontend, backend, documentation), combined with any static configured labels.
+- **GitHub Projects v2 Organization:** Seamlessly adds the issue to your GitHub Project v2 (via project URL or number) and populates custom fields like **Priority** (P0-P3 / Urgent, High, Medium, Low) and **Size** (XS, S, M, L, XL) using Gemini's triage classification.
+- **User Assignment (Settings-Gated):** When enabled in settings, automatically assigns the repository owner, designated users, or domain maintainers based on keyword/label assignment rules.
+- **Milestone Association (Settings-Gated):** Automatically associates issues with a fixed milestone or lets Gemini intelligently select the best matching active repository milestone when set to `auto`.
+- **Development Branch Creation & Linking (Settings-Gated):** When enabled, automatically spins up a clean development branch (e.g. `issue-42-fix-login-button`) from the default branch and associates it with the issue via GitHub's GraphQL `createLinkedBranch`.
 - **On-Demand `/enhance` Comment Command:** Work on existing or edited issues at any time! Commenting `/enhance` on any issue triggers enhancement, automatically acknowledges with emoji reactions (👀 while running, 🚀 when done), and safely re-formats previously enhanced issues.
 - **Authorized Permissions:** `/enhance` is restricted to authorized contributors: the original issue author, repository collaborators, and owners/maintainers.
-- **Centralized Workflow Settings:** Fully customizable workflow settings section to easily toggle or populate optional features (comments, badges, original text dropdown, title enhancement, labels, bot ignore lists, and temperature).
+- **Centralized Workflow Settings:** Fully customizable workflow settings section to easily toggle or populate optional features (comments, badges, original text dropdown, title enhancement, labels, bot ignore lists, projects, assignments, and branch creation).
 - **Automated Workflow:** Triggers immediately whenever an issue is opened (`issues: [opened]`) or when `/enhance` is commented (`issue_comment: [created]`).
 - **Two-Fold Enhancement:**
   1. Updates the issue body with structured markdown while preserving the raw text in an expandable `<details>` section for transparency.
@@ -17,6 +22,7 @@ An automated GitHub workflow and CLI utility powered by Google Gemini Flash Lite
 - **Zero-Dependency Runner:** Pre-bundled with `dist/index.mjs` so downstream repos do not need to run `npm install`, provide a `package-lock.json`, or contain Node.js code.
 - **Loop & Duplicate Protection:** Uses metadata markers (`<!-- gemini-enhanced -->`) to avoid repeated formatting or execution loops.
 - **Model Support & Fallback:** Powered by `gemini-3.1-flash-lite` (the baseline model) with automatic fallback handling.
+- **Graceful Error Handling:** If project permissions, branch rules, or milestone assignments fail, clear warnings are logged without breaking issue enhancement.
 - **Local Testing:** Test directly on your local machine using interactive prompts or CLI flags via `run.bat` or `node src/index.js`.
 
 ---
@@ -40,7 +46,8 @@ on:
 
 permissions:
   issues: write
-  contents: read
+  contents: write
+  repository-projects: write
 
 jobs:
   enhance-issue:
@@ -83,12 +90,31 @@ jobs:
           ignore-authors: 'dependabot[bot],renovate[bot]'
           # Comma-separated list of labels that skip enhancement if already present
           ignore-labels: 'no-enhance'
+
+          # --- Triage, Assignment, Milestones & Branches ---
+          # Automatically assign repository owner or designated assignees (default: false)
+          auto-assign: 'false'
+          # Comma-separated GitHub usernames to assign (optional)
+          assignees: ''
+          # Milestone to associate (e.g. 'v1.0.0' or 'auto' for Gemini auto-selection)
+          milestone: ''
+          # Automatically create and link a development branch for this issue (default: false)
+          create-branch: 'false'
+          # Branch prefix for development branch creation (default: 'issue-')
+          branch-prefix: 'issue-'
+
+          # --- GitHub Projects v2 Management ---
+          # Project URL (e.g. 'https://github.com/orgs/my-org/projects/1')
+          project-url: ''
+          # Optional token with project:write scope (defaults to github-token)
+          project-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
 ```
 
 ### Step 2: Add Secret to the Target Repository
 1. Go to your repository's **Settings > Secrets and variables > Actions > New repository secret**.
 2. Name: `GEMINI_API_KEY`
 3. Value: Your Google Gemini API key.
+4. *(Optional)* Name: `PROJECT_TOKEN` if organizing issues across Organization/User Projects v2 that require `project: write` scope.
 
 That's all! The action executes self-contained via its pre-bundled distribution and requires no `package.json`, `package-lock.json`, or code checkout in the target repository.
 
@@ -117,13 +143,20 @@ The table below outlines all available settings under `with:`:
 | `preserve-original` | boolean / string | `'true'` | Toggles appending the original raw issue submission in an expandable `<details>` dropdown. |
 | `add-badge` | boolean / string | `'true'` | Toggles prepending the `> [!NOTE]` header banner at the top of the issue. |
 | `enhance-title` | boolean / string | `'false'` | Toggles rewording and clarifying the issue title in addition to the issue body. |
-| `add-labels` | string | `''` | Comma-separated list of labels to automatically attach to formatted issues (e.g. `enhanced, triage`). |
+| `add-labels` | string | `''` | Comma-separated list of static labels to apply to formatted issues (e.g. `enhanced, triage`). |
 | `ignore-authors` | string | `''` | Comma-separated list of authors or bot usernames whose issues will not be enhanced (e.g. `dependabot[bot],renovate[bot]`). |
 | `ignore-labels` | string | `''` | Comma-separated list of labels that skip enhancement if present on the issue (e.g. `no-enhance, manual`). |
+| `project-url` | string | `''` | URL of the GitHub Project v2 (e.g. `https://github.com/orgs/my-org/projects/1` or `https://github.com/users/my-user/projects/2`). |
+| `project-token` | string | `${{ github.token }}` | PAT or GitHub App token with `project:write` permission to add issues to Projects v2. |
+| `auto-assign` | boolean / string | `'false'` | Whether to automatically assign the repository owner or default assignees when enabled. |
+| `assignees` | string | `''` | Comma-separated GitHub usernames to assign to newly enhanced issues. |
+| `milestone` | string | `''` | Milestone title/number to associate, or `'auto'` to let Gemini select from open repository milestones. |
+| `create-branch` | boolean / string | `'false'` | Whether to automatically create and link a development branch for the issue. |
+| `branch-prefix` | string | `'issue-'` | Prefix used when naming newly created development branches (e.g. `issue-12-login-bug`). |
 
 ### Optional Repository Configuration File
 
-In addition to workflow `with:` inputs, settings can also be defined in a `.github/issue-enhancer.json` file in your repository:
+In addition to workflow `with:` inputs, advanced settings and rules can be defined in `.github/issue-enhancer.json`:
 
 ```json
 {
@@ -135,7 +168,23 @@ In addition to workflow `with:` inputs, settings can also be defined in a `.gith
   "enhanceTitle": false,
   "addLabels": ["enhanced"],
   "ignoreAuthors": ["dependabot[bot]", "renovate[bot]"],
-  "ignoreLabels": ["no-enhance"]
+  "ignoreLabels": ["no-enhance"],
+  "project": {
+    "url": "https://github.com/orgs/my-org/projects/1",
+    "priorityField": "Priority",
+    "sizeField": "Size"
+  },
+  "triage": {
+    "autoAssign": true,
+    "assignees": ["lead-dev"],
+    "milestone": "auto",
+    "createBranch": true,
+    "branchPrefix": "issue-",
+    "assignmentRules": [
+      { "label": "frontend", "assignees": ["frontend-lead"] },
+      { "keyword": "database", "assignees": ["db-admin"] }
+    ]
+  }
 }
 ```
 
@@ -160,14 +209,15 @@ github-issue-enhancer/
 │   └── build.js                       # Build & bundling script using esbuild
 ├── src/
 │   ├── config.js                      # Centralized configuration loader & parser
-│   ├── gemini.js                      # Gemini API client & strict prompt constraints
-│   ├── github.js                      # Octokit issue updater, labeler & comment poster
+│   ├── gemini.js                      # Gemini API client, triage evaluation & prompt constraints
+│   ├── github.js                      # Octokit issue updater, labeler, milestone & branch linker
+│   ├── projects.js                    # GitHub Projects v2 GraphQL integration & attribute setter
 │   └── index.js                       # Main runner (GitHub Action + CLI)
 ├── CHANGELOG.md                       # Dated project changelog
 ├── SECURITY.md                        # Security & secret management policy
 ├── README.md                          # Project documentation
 ├── run.bat                            # Windows launch & test script
-├── package.json                       # Node.js project manifest (v0.2.0)
+├── package.json                       # Node.js project manifest
 └── .gitignore                         # Ignored dependencies & secrets
 ```
 

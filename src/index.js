@@ -7,8 +7,15 @@ import {
   isAlreadyEnhanced,
   extractRawIssueContent,
   addCommentReaction,
-  updateGitHubIssue
+  updateGitHubIssue,
+  fetchRepositoryLabels,
+  fetchRepositoryMilestones,
+  getIssueDetails,
+  assignUsersToIssue,
+  setIssueMilestone,
+  createAndLinkBranch
 } from "./github.js";
+import { assignIssueToProject } from "./projects.js";
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -35,6 +42,16 @@ function parseArgs() {
       parsed.addBadge = false;
     } else if (arg === "--add-labels" && i + 1 < args.length) {
       parsed.addLabels = args[++i];
+    } else if (arg === "--auto-assign") {
+      parsed.autoAssign = true;
+    } else if (arg === "--assignees" && i + 1 < args.length) {
+      parsed.assignees = args[++i];
+    } else if (arg === "--milestone" && i + 1 < args.length) {
+      parsed.milestone = args[++i];
+    } else if (arg === "--create-branch") {
+      parsed.createBranch = true;
+    } else if (arg === "--project-url" && i + 1 < args.length) {
+      parsed.projectUrl = args[++i];
     } else if (arg === "--test") {
       parsed.test = true;
     } else if (arg === "--help" || arg === "-h") {
@@ -57,6 +74,64 @@ function promptLine(question) {
   });
 }
 
+function resolveAssignees({ repository, config, labels, title, body }) {
+  const [owner] = repository ? repository.split("/") : [""];
+  const assigneesSet = new Set(config.assignees || []);
+
+  if (Array.isArray(config.assignmentRules)) {
+    const textToMatch = `${title} ${body}`.toLowerCase();
+    const currentLabels = (labels || []).map((l) => l.toLowerCase());
+
+    for (const rule of config.assignmentRules) {
+      if (!rule || !Array.isArray(rule.assignees)) continue;
+      let matched = false;
+
+      if (rule.label && currentLabels.includes(rule.label.toLowerCase())) {
+        matched = true;
+      }
+      if (rule.keyword && textToMatch.includes(rule.keyword.toLowerCase())) {
+        matched = true;
+      }
+
+      if (matched) {
+        for (const a of rule.assignees) {
+          assigneesSet.add(a);
+        }
+      }
+    }
+  }
+
+  if (config.autoAssign && assigneesSet.size === 0 && owner) {
+    assigneesSet.add(owner);
+  }
+
+  return Array.from(assigneesSet);
+}
+
+function resolveMilestone({ config, candidateMilestones, recommendedMilestone }) {
+  if (!config.milestone) return null;
+
+  const milestoneSetting = String(config.milestone).trim();
+
+  if (milestoneSetting.toLowerCase() === "auto") {
+    if (!recommendedMilestone) return null;
+    const match = candidateMilestones.find(
+      (m) => m.title.toLowerCase() === recommendedMilestone.toLowerCase()
+    );
+    return match ? match.number : null;
+  }
+
+  const asNumber = parseInt(milestoneSetting, 10);
+  if (!isNaN(asNumber) && String(asNumber) === milestoneSetting) {
+    return asNumber;
+  }
+
+  const match = candidateMilestones.find(
+    (m) => m.title.toLowerCase() === milestoneSetting.toLowerCase()
+  );
+  return match ? match.number : null;
+}
+
 async function runLocal(args) {
   if (args.help) {
     console.log(`
@@ -74,6 +149,11 @@ Options:
   --no-original                Disable appending original submission block
   --no-badge                   Disable [!NOTE] header callout badge
   --add-labels <labels>        Comma-separated labels to apply
+  --auto-assign                Enable auto-assignment
+  --assignees <users>          Comma-separated usernames to assign
+  --milestone <name/num/auto>  Milestone to assign
+  --create-branch              Enable development branch creation
+  --project-url <url>          GitHub Project v2 URL
   --test                       Run with a simulated issue
   --help, -h                   Show help information
     `);
@@ -104,49 +184,76 @@ Options:
     body = lines.join("\n").trim();
   }
 
-  console.log(`\nEnhancing issue with Gemini (Model: ${config.geminiModel}, Temp: ${config.temperature})...\n`);
+  if (!title && !body) {
+    console.error("Error: At least an issue title or body is required.");
+    process.exit(1);
+  }
+
+  console.log("\nEnhancing issue with Gemini Flash Lite...\n");
+
   try {
-    const { isThorough, enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
+    const {
+      isThorough,
+      enhancedTitle,
+      enhancedBody,
+      fixInstructions,
+      recommendedLabels,
+      estimatedPriority,
+      estimatedSize,
+      recommendedMilestone,
+      modelUsed
+    } = await enhanceIssue(title, body, {
       model: config.geminiModel,
       temperature: config.temperature,
       customInstruction: config.customInstruction,
-      enhanceTitle: config.enhanceTitle
+      enhanceTitle: config.enhanceTitle,
+      availableLabels: config.addLabels.length > 0 ? config.addLabels : ["bug", "documentation", "enhancement", "ui/ux", "frontend", "backend"]
     });
 
-    console.log("==========================================");
-    console.log(`  ENHANCED ISSUE (Model: ${modelUsed})`);
-    console.log(`  Thoroughness Check: ${isThorough ? "THOROUGH (body preserved in standard runs)" : "NEEDS_ENHANCEMENT"}`);
-    console.log("==========================================");
-    if (enhancedTitle) {
-      console.log(`\nEnhanced Title: ${enhancedTitle}\n`);
+    console.log("=========================================");
+    console.log("             ENHANCED ISSUE              ");
+    console.log("=========================================\n");
+    console.log(`Evaluated Thorough: ${isThorough ? "YES (Skip body rewrite)" : "NO (Rewritten for clarity)"}`);
+    if (config.enhanceTitle && enhancedTitle) {
+      console.log(`Enhanced Title: ${enhancedTitle}\n`);
     }
 
     if (config.addBadge) {
-      console.log("> [!NOTE]\n> **Issue Formatted with Gemini Flash Lite**\n");
+      console.log("> [!NOTE]");
+      console.log("> **Issue Formatted with Gemini Flash Lite**");
+      console.log("> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.\n");
     }
 
     console.log(enhancedBody);
 
     if (config.preserveOriginal) {
       console.log("\n---");
-      console.log("<details>\n<summary>🔍 <b>Original Submission</b></summary>\n");
-      console.log(body || "*(Original body was empty)*");
+      console.log("<details>");
+      console.log("<summary>🔍 <b>Original Submission</b> (Click to expand)</summary>\n");
+      console.log(body ? body : "*(Original body was empty)*");
       console.log("\n</details>");
     }
 
-    console.log("\n==========================================");
+    console.log("\n=========================================");
+    console.log("           AUTOMATED TRIAGE              ");
+    console.log("=========================================");
+    console.log(`Recommended Labels: ${recommendedLabels.length > 0 ? recommendedLabels.join(", ") : "None"}`);
+    console.log(`Estimated Priority: ${estimatedPriority || "Unspecified"}`);
+    console.log(`Estimated Size:     ${estimatedSize || "Unspecified"}`);
+    console.log(`Recommended Milestone: ${recommendedMilestone || "None"}`);
 
     if (config.postComment) {
-      console.log("  CONTRIBUTOR FIX INSTRUCTIONS (COMMENT)");
-      console.log("==========================================");
+      console.log("\n=========================================");
+      console.log("     CONTRIBUTOR FIX INSTRUCTIONS        ");
+      console.log("=========================================\n");
       if (fixInstructions) {
         console.log("> [!TIP]");
-        console.log("> ### 💡 Instructions to Fix This Issue\n");
+        console.log("> ### 💡 Instructions to Fix This Issue");
+        console.log("> Here are brief instructions to help anyone interested in resolving this issue:\n");
         console.log(fixInstructions);
       } else {
-        console.log("*(No comment would be posted: fix instructions not applicable for this issue)*");
+        console.log("(Instructions not applicable for this issue)");
       }
-      console.log("==========================================");
     }
   } catch (error) {
     console.error("Enhancement failed:", error.message);
@@ -217,7 +324,6 @@ async function runGitHubAction() {
     isCommentTrigger = true;
     commentId = eventData.comment.id;
 
-    // Disregard if comment is on a pull request
     if (eventData.issue && eventData.issue.pull_request) {
       console.log("[GitHub Action] Comment is on a pull request, not an issue. Skipping.");
       return;
@@ -230,7 +336,6 @@ async function runGitHubAction() {
       return;
     }
 
-    // Permission verification: issue author, repository owner, members, or collaborators
     const commentAuthor = eventData.comment.user?.login || process.env.COMMENT_AUTHOR || "";
     const issueAuthor = eventData.issue?.user?.login || author || "";
     const authorAssociation = (
@@ -251,7 +356,6 @@ async function runGitHubAction() {
       return;
     }
 
-    // Acknowledge command with 'eyes' reaction
     if (commentId && process.env.GITHUB_TOKEN) {
       await addCommentReaction({
         token: process.env.GITHUB_TOKEN,
@@ -261,21 +365,18 @@ async function runGitHubAction() {
       });
     }
 
-    // For /enhance command, force enhancement and extract raw text if already formatted
     forceEnhance = true;
     if (isAlreadyEnhanced(body)) {
       console.log(`[GitHub Action] Issue #${issueNumber} was previously enhanced. Extracting base content for re-enhancement.`);
       body = extractRawIssueContent(body);
     }
   } else {
-    // Normal issue open trigger: check loop protection
     if (isAlreadyEnhanced(body)) {
       console.log(`[GitHub Action] Issue #${issueNumber} is already enhanced. Skipping to prevent loop.`);
       return;
     }
   }
 
-  // Check ignore-authors filter
   if (config.ignoreAuthors && config.ignoreAuthors.length > 0 && author) {
     const isIgnoredAuthor = config.ignoreAuthors.some(
       (ignored) => ignored.trim().toLowerCase() === author.trim().toLowerCase()
@@ -286,7 +387,6 @@ async function runGitHubAction() {
     }
   }
 
-  // Check ignore-labels filter
   if (config.ignoreLabels && config.ignoreLabels.length > 0 && labels.length > 0) {
     const lowerLabels = labels.map((l) => l.toLowerCase());
     const matchedLabel = config.ignoreLabels.find((il) => lowerLabels.includes(il.toLowerCase()));
@@ -296,21 +396,103 @@ async function runGitHubAction() {
     }
   }
 
+  // Fetch repository context (labels, milestones, issue node_id)
+  console.log(`[GitHub Action] Fetching repository labels and context for ${repository}...`);
+  const availableLabels = await fetchRepositoryLabels({
+    token: process.env.GITHUB_TOKEN,
+    repository
+  });
+
+  let candidateMilestones = [];
+  if (config.milestone) {
+    candidateMilestones = await fetchRepositoryMilestones({
+      token: process.env.GITHUB_TOKEN,
+      repository
+    });
+  }
+
+  const issueDetails = await getIssueDetails({
+    token: process.env.GITHUB_TOKEN,
+    repository,
+    issueNumber
+  });
+  const issueNodeId = issueDetails?.node_id || null;
+
   console.log(`[GitHub Action] Processing issue #${issueNumber}: "${title}" (forceEnhance: ${forceEnhance})`);
-  const { isThorough, enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
+  const {
+    isThorough,
+    enhancedTitle,
+    enhancedBody,
+    fixInstructions,
+    recommendedLabels,
+    estimatedPriority,
+    estimatedSize,
+    recommendedMilestone,
+    modelUsed
+  } = await enhanceIssue(title, body, {
     model: config.geminiModel,
     temperature: config.temperature,
     customInstruction: config.customInstruction,
-    enhanceTitle: config.enhanceTitle
+    enhanceTitle: config.enhanceTitle,
+    availableLabels,
+    candidateMilestones: candidateMilestones.map((m) => m.title)
   });
 
   const skipBodyUpdate = Boolean(isThorough && !forceEnhance);
   if (skipBodyUpdate) {
     console.log(
-      `[GitHub Action] Issue #${issueNumber} was evaluated as thorough on its own. Skipping body and title formatting, posting fix instructions comment if applicable.`
+      `[GitHub Action] Issue #${issueNumber} was evaluated as thorough on its own. Preserving original body/title, updating triage attributes.`
     );
   }
 
+  // Automated Assignment (if enabled or configured)
+  const resolvedAssignees = resolveAssignees({
+    repository,
+    config,
+    labels: [...labels, ...recommendedLabels],
+    title,
+    body
+  });
+
+  if (resolvedAssignees.length > 0) {
+    await assignUsersToIssue({
+      token: process.env.GITHUB_TOKEN,
+      repository,
+      issueNumber,
+      assignees: resolvedAssignees
+    });
+  }
+
+  // Milestone Association (if enabled or configured)
+  const resolvedMilestoneNumber = resolveMilestone({
+    config,
+    candidateMilestones,
+    recommendedMilestone
+  });
+
+  if (resolvedMilestoneNumber) {
+    await setIssueMilestone({
+      token: process.env.GITHUB_TOKEN,
+      repository,
+      issueNumber,
+      milestoneNumber: resolvedMilestoneNumber
+    });
+  }
+
+  // Development Branch Creation & Linking (if enabled)
+  let createdBranchName = null;
+  if (config.createBranch) {
+    createdBranchName = await createAndLinkBranch({
+      token: process.env.GITHUB_TOKEN,
+      repository,
+      issueNumber,
+      issueTitle: enhancedTitle || title,
+      issueNodeId,
+      branchPrefix: config.branchPrefix
+    });
+  }
+
+  // Update GitHub Issue body, title, labels, and contributor comment
   await updateGitHubIssue({
     token: process.env.GITHUB_TOKEN,
     repository,
@@ -326,9 +508,26 @@ async function runGitHubAction() {
       preserveOriginal: config.preserveOriginal,
       addBadge: config.addBadge,
       addLabels: config.addLabels,
-      skipBodyUpdate
+      recommendedLabels,
+      skipBodyUpdate,
+      createdBranchName
     }
   });
+
+  // GitHub Project v2 Assignment & Attributes (if configured)
+  if ((config.projectUrl || config.projectNumber) && issueNodeId) {
+    await assignIssueToProject({
+      token: config.projectToken,
+      issueNodeId,
+      projectUrl: config.projectUrl,
+      projectNumber: config.projectNumber,
+      projectOwner: config.projectOwner,
+      priority: estimatedPriority,
+      size: estimatedSize,
+      priorityFieldName: config.priorityField,
+      sizeFieldName: config.sizeField
+    });
+  }
 
   // Acknowledge completion on /enhance comment with 'rocket' reaction
   if (isCommentTrigger && commentId && process.env.GITHUB_TOKEN) {

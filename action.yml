@@ -1,5 +1,5 @@
 name: 'GitHub Issue Enhancer'
-description: 'Rewords and formats GitHub issues using Gemini Flash Lite, evaluates issue thoroughness, and supports /enhance comment triggers.'
+description: 'Rewords and formats GitHub issues using Gemini Flash Lite, automates user assignment, dynamic labeling, milestone & branch linking, and GitHub Projects v2 organization.'
 author: 'JustJade2007'
 branding:
   icon: 'alert-circle'
@@ -41,7 +41,7 @@ inputs:
     required: false
     default: 'false'
   add-labels:
-    description: 'Comma-separated labels to apply upon enhancement'
+    description: 'Comma-separated static labels to apply upon enhancement'
     required: false
     default: ''
   ignore-authors:
@@ -52,6 +52,34 @@ inputs:
     description: 'Comma-separated labels that skip enhancement if already present'
     required: false
     default: ''
+  project-url:
+    description: 'URL of the GitHub Project v2 (e.g. https://github.com/orgs/ORG/projects/1)'
+    required: false
+    default: ''
+  project-token:
+    description: 'Token with project:write permission (defaults to github-token)'
+    required: false
+    default: ''
+  auto-assign:
+    description: 'Whether to automatically assign repository owner or designated assignees (true/false)'
+    required: false
+    default: 'false'
+  assignees:
+    description: 'Comma-separated GitHub usernames to assign to the issue'
+    required: false
+    default: ''
+  milestone:
+    description: 'Milestone name, number, or "auto" to let Gemini pick from open milestones'
+    required: false
+    default: ''
+  create-branch:
+    description: 'Whether to create and link a development branch for this issue (true/false)'
+    required: false
+    default: 'false'
+  branch-prefix:
+    description: 'Prefix for newly created development branches (default: "issue-")'
+    required: false
+    default: 'issue-'
 
 runs:
   using: 'composite'
@@ -86,4 +114,11 @@ runs:
         ADD_LABELS: ${{ inputs.add-labels }}
         IGNORE_AUTHORS: ${{ inputs.ignore-authors }}
         IGNORE_LABELS: ${{ inputs.ignore-labels }}
+        PROJECT_URL: ${{ inputs.project-url }}
+        PROJECT_TOKEN: ${{ inputs.project-token }}
+        AUTO_ASSIGN: ${{ inputs.auto-assign }}
+        ASSIGNEES: ${{ inputs.assignees }}
+        MILESTONE: ${{ inputs.milestone }}
+        CREATE_BRANCH: ${{ inputs.create-branch }}
+        BRANCH_PREFIX: ${{ inputs.branch-prefix }}
       run: node "${{ github.action_path }}/dist/index.mjs"

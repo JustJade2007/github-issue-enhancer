@@ -1,4 +1,5 @@
 import { Octokit } from "@octokit/rest";
+import { assignIssueToProject } from "./projects.js";
 
 const ENHANCED_MARKER = "<!-- gemini-enhanced -->";
 
@@ -68,8 +69,219 @@ export async function addCommentReaction({ token, repository, commentId, content
 }
 
 /**
+ * Fetches all active label names for a repository.
+ * @param {object} params
+ * @param {string} params.token
+ * @param {string} params.repository
+ * @returns {Promise<string[]>}
+ */
+export async function fetchRepositoryLabels({ token, repository }) {
+  if (!token || !repository) return [];
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit({ auth: token });
+    const { data } = await octokit.rest.issues.listLabelsForRepo({
+      owner,
+      repo,
+      per_page: 100
+    });
+    return data.map((l) => l.name);
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not fetch repository labels:`, err.message);
+    return [];
+  }
+}
+
+/**
+ * Fetches open milestones for a repository.
+ * @param {object} params
+ * @param {string} params.token
+ * @param {string} params.repository
+ * @returns {Promise<Array<{ id: number, number: number, title: string }>>}
+ */
+export async function fetchRepositoryMilestones({ token, repository }) {
+  if (!token || !repository) return [];
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit({ auth: token });
+    const { data } = await octokit.rest.issues.listMilestones({
+      owner,
+      repo,
+      state: "open",
+      per_page: 50
+    });
+    return data.map((m) => ({ id: m.id, number: m.number, title: m.title }));
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not fetch repository milestones:`, err.message);
+    return [];
+  }
+}
+
+/**
+ * Fetches detailed GitHub issue information, including node_id.
+ * @param {object} params
+ * @param {string} params.token
+ * @param {string} params.repository
+ * @param {number|string} params.issueNumber
+ * @returns {Promise<any>}
+ */
+export async function getIssueDetails({ token, repository, issueNumber }) {
+  if (!token || !repository || !issueNumber) return null;
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit({ auth: token });
+    const { data } = await octokit.rest.issues.get({
+      owner,
+      repo,
+      issue_number: parseInt(issueNumber, 10)
+    });
+    return data;
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not fetch details for issue #${issueNumber}:`, err.message);
+    return null;
+  }
+}
+
+/**
+ * Assigns users to an issue.
+ * @param {object} params
+ * @param {string} params.token
+ * @param {string} params.repository
+ * @param {number|string} params.issueNumber
+ * @param {string[]} params.assignees
+ */
+export async function assignUsersToIssue({ token, repository, issueNumber, assignees }) {
+  if (!token || !repository || !issueNumber || !Array.isArray(assignees) || assignees.length === 0) return;
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit({ auth: token });
+    console.log(`[GitHub] Assigning issue #${issueNumber} to: ${assignees.join(", ")}`);
+    await octokit.rest.issues.addAssignees({
+      owner,
+      repo,
+      issue_number: parseInt(issueNumber, 10),
+      assignees
+    });
+    console.log(`[GitHub] Successfully assigned issue #${issueNumber}.`);
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Failed to assign users to issue #${issueNumber}:`, err.message);
+  }
+}
+
+/**
+ * Sets milestone on an issue.
+ * @param {object} params
+ * @param {string} params.token
+ * @param {string} params.repository
+ * @param {number|string} params.issueNumber
+ * @param {number} params.milestoneNumber
+ */
+export async function setIssueMilestone({ token, repository, issueNumber, milestoneNumber }) {
+  if (!token || !repository || !issueNumber || !milestoneNumber) return;
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit({ auth: token });
+    console.log(`[GitHub] Setting milestone #${milestoneNumber} on issue #${issueNumber}...`);
+    await octokit.rest.issues.update({
+      owner,
+      repo,
+      issue_number: parseInt(issueNumber, 10),
+      milestone: milestoneNumber
+    });
+    console.log(`[GitHub] Successfully set milestone on issue #${issueNumber}.`);
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Failed to set milestone on issue #${issueNumber}:`, err.message);
+  }
+}
+
+/**
+ * Creates a git development branch for the issue and associates it via GraphQL createLinkedBranch if supported.
+ * @param {object} params
+ * @param {string} params.token
+ * @param {string} params.repository
+ * @param {number|string} params.issueNumber
+ * @param {string} params.issueTitle
+ * @param {string} [params.issueNodeId]
+ * @param {string} [params.branchPrefix="issue-"]
+ * @returns {Promise<string|null>} Created branch name or null
+ */
+export async function createAndLinkBranch({
+  token,
+  repository,
+  issueNumber,
+  issueTitle,
+  issueNodeId,
+  branchPrefix = "issue-"
+}) {
+  if (!token || !repository || !issueNumber) return null;
+  const [owner, repo] = repository.split("/");
+  const octokit = new Octokit({ auth: token });
+
+  try {
+    // 1. Get default branch info
+    const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
+    const defaultBranch = repoData.default_branch || "main";
+
+    const { data: refData } = await octokit.rest.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${defaultBranch}`
+    });
+    const latestCommitSha = refData.object.sha;
+
+    // 2. Format slug from title
+    const slug = (issueTitle || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 30);
+
+    const branchName = `${branchPrefix}${issueNumber}${slug ? `-${slug}` : ""}`;
+    console.log(`[GitHub] Creating development branch "${branchName}" from "${defaultBranch}" (${latestCommitSha.slice(0, 7)})...`);
+
+    // 3. Create ref in git
+    await octokit.rest.git.createRef({
+      owner,
+      repo,
+      ref: `refs/heads/${branchName}`,
+      sha: latestCommitSha
+    });
+    console.log(`[GitHub] Successfully created branch "${branchName}".`);
+
+    // 4. Link branch to issue via GraphQL createLinkedBranch if issueNodeId is available
+    if (issueNodeId) {
+      try {
+        const linkMutation = `
+          mutation linkBranch($issueId: ID!, $oid: GitObjectID!, $name: String!) {
+            createLinkedBranch(input: { issueId: $issueId, oid: $oid, name: $name }) {
+              linkedBranch {
+                id
+              }
+            }
+          }
+        `;
+        await octokit.graphql(linkMutation, {
+          issueId: issueNodeId,
+          oid: latestCommitSha,
+          name: branchName
+        });
+        console.log(`[GitHub] Successfully linked branch "${branchName}" to issue #${issueNumber}.`);
+      } catch (linkErr) {
+        console.log(`[GitHub] Note: Linked branch association via GraphQL not available (${linkErr.message}). Branch was created in Git.`);
+      }
+    }
+
+    return branchName;
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Failed to create development branch:`, err.message);
+    return null;
+  }
+}
+
+/**
  * Updates a GitHub issue with the enhanced markdown body, applies optional title changes,
  * adds labels, and posts contributor fix instructions as a comment if applicable.
+ * Also coordinates automated triage: user assignment, milestone, branch linking, and project attributes.
  * @param {object} params
  * @param {string} params.token - GitHub Token
  * @param {string} params.repository - "owner/repo" string
@@ -81,11 +293,6 @@ export async function addCommentReaction({ token, repository, commentId, content
  * @param {string} [params.fixInstructions] - Optional brief instructions to fix the issue
  * @param {string} params.modelUsed - Model name used
  * @param {object} [params.options] - Configurable workflow settings
- * @param {boolean} [params.options.postComment=true] - Whether to post comment if applicable
- * @param {boolean} [params.options.preserveOriginal=true] - Whether to include collapsible original text
- * @param {boolean} [params.options.addBadge=true] - Whether to prepend [!NOTE] header badge
- * @param {string[]} [params.options.addLabels=[]] - Labels to add to the issue
- * @param {boolean} [params.options.skipBodyUpdate=false] - Whether to skip rewriting issue body/title
  */
 export async function updateGitHubIssue({
   token,
@@ -117,11 +324,28 @@ export async function updateGitHubIssue({
     preserveOriginal = true,
     addBadge = true,
     addLabels = [],
-    skipBodyUpdate = false
+    recommendedLabels = [],
+    skipBodyUpdate = false,
+    autoAssign = false,
+    assignees = [],
+    milestone = null,
+    candidateMilestones = [],
+    createBranch = false,
+    branchPrefix = "issue-",
+    projectUrl = null,
+    projectNumber = null,
+    projectOwner = null,
+    projectToken = null,
+    estimatedPriority = null,
+    estimatedSize = null,
+    priorityField = "Priority",
+    sizeField = "Size",
+    createdBranchName = null
   } = options;
 
   const octokit = new Octokit({ auth: token });
 
+  // 1. Update issue body & title if not skipped
   if (skipBodyUpdate) {
     console.log(`[GitHub] Issue #${num} description was evaluated as thorough. Preserving original issue body and title.`);
   } else {
@@ -171,15 +395,19 @@ export async function updateGitHubIssue({
     console.log(`[GitHub] Successfully updated issue #${num} description.`);
   }
 
-  // Apply optional labels if configured
-  if (Array.isArray(addLabels) && addLabels.length > 0) {
+  // 2. Merge and apply labels (configured addLabels + AI recommendedLabels)
+  const combinedLabels = Array.from(
+    new Set([...addLabels, ...recommendedLabels].map((l) => l.trim()).filter(Boolean))
+  );
+
+  if (combinedLabels.length > 0) {
     try {
-      console.log(`[GitHub] Adding configured label(s) to issue #${num}: ${addLabels.join(", ")}`);
+      console.log(`[GitHub] Adding label(s) to issue #${num}: ${combinedLabels.join(", ")}`);
       await octokit.rest.issues.addLabels({
         owner,
         repo,
         issue_number: num,
-        labels: addLabels
+        labels: combinedLabels
       });
       console.log(`[GitHub] Successfully added labels to issue #${num}.`);
     } catch (lblErr) {
@@ -187,7 +415,7 @@ export async function updateGitHubIssue({
     }
   }
 
-  // Post comment with contributor fix instructions if enabled and applicable
+  // 3. Post comment with contributor fix instructions if enabled and applicable
   if (postComment) {
     if (fixInstructions && fixInstructions.trim()) {
       const commentLines = [
@@ -197,6 +425,14 @@ export async function updateGitHubIssue({
         "",
         fixInstructions.trim()
       ];
+
+      if (createdBranchName) {
+        commentLines.push(
+          "",
+          "> [!NOTE]",
+          `> Development branch \`${createdBranchName}\` has been created for this issue.`
+        );
+      }
 
       const commentContent = commentLines.join("\n");
 
@@ -215,4 +451,3 @@ export async function updateGitHubIssue({
     console.log(`[GitHub] Skipping comment on issue #${num} (post-comment is disabled).`);
   }
 }
-

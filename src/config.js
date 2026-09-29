@@ -10,7 +10,20 @@ export const DEFAULT_CONFIG = {
   enhanceTitle: false,
   addLabels: [],
   ignoreAuthors: [],
-  ignoreLabels: []
+  ignoreLabels: [],
+  // Triage & Project Settings
+  projectUrl: "",
+  projectToken: "",
+  projectNumber: null,
+  projectOwner: "",
+  priorityField: "Priority",
+  sizeField: "Size",
+  autoAssign: false,
+  assignees: [],
+  assignmentRules: [],
+  milestone: "",
+  createBranch: false,
+  branchPrefix: "issue-"
 };
 
 /**
@@ -145,7 +158,85 @@ export function loadConfig(overrides = {}) {
         ? parseList(env.IGNORE_LABELS)
         : fileConfig.ignoreLabels !== undefined
         ? parseList(fileConfig.ignoreLabels)
-        : DEFAULT_CONFIG.ignoreLabels
+        : DEFAULT_CONFIG.ignoreLabels,
+    // GitHub Projects v2
+    projectUrl:
+      overrides.projectUrl ||
+      env.PROJECT_URL ||
+      fileConfig.project?.url ||
+      fileConfig.projectUrl ||
+      DEFAULT_CONFIG.projectUrl,
+    projectToken:
+      overrides.projectToken ||
+      env.PROJECT_TOKEN ||
+      fileConfig.project?.token ||
+      env.GITHUB_TOKEN ||
+      DEFAULT_CONFIG.projectToken,
+    projectNumber:
+      overrides.projectNumber !== undefined
+        ? overrides.projectNumber
+        : env.PROJECT_NUMBER !== undefined
+        ? env.PROJECT_NUMBER
+        : fileConfig.project?.number || DEFAULT_CONFIG.projectNumber,
+    projectOwner:
+      overrides.projectOwner ||
+      env.PROJECT_OWNER ||
+      fileConfig.project?.owner ||
+      DEFAULT_CONFIG.projectOwner,
+    priorityField:
+      overrides.priorityField ||
+      env.PROJECT_PRIORITY_FIELD ||
+      fileConfig.project?.priorityField ||
+      DEFAULT_CONFIG.priorityField,
+    sizeField:
+      overrides.sizeField ||
+      env.PROJECT_SIZE_FIELD ||
+      fileConfig.project?.sizeField ||
+      DEFAULT_CONFIG.sizeField,
+    // Automated Triage & Assignment
+    autoAssign:
+      overrides.autoAssign !== undefined
+        ? parseBoolean(overrides.autoAssign, DEFAULT_CONFIG.autoAssign)
+        : env.AUTO_ASSIGN !== undefined
+        ? parseBoolean(env.AUTO_ASSIGN, DEFAULT_CONFIG.autoAssign)
+        : fileConfig.triage?.autoAssign !== undefined
+        ? parseBoolean(fileConfig.triage.autoAssign, DEFAULT_CONFIG.autoAssign)
+        : DEFAULT_CONFIG.autoAssign,
+    assignees:
+      overrides.assignees !== undefined
+        ? parseList(overrides.assignees)
+        : env.ASSIGNEES !== undefined
+        ? parseList(env.ASSIGNEES)
+        : fileConfig.triage?.assignees !== undefined
+        ? parseList(fileConfig.triage.assignees)
+        : DEFAULT_CONFIG.assignees,
+    assignmentRules:
+      fileConfig.triage?.assignmentRules ||
+      fileConfig.assignmentRules ||
+      DEFAULT_CONFIG.assignmentRules,
+    // Milestones
+    milestone:
+      overrides.milestone !== undefined
+        ? String(overrides.milestone).trim()
+        : env.MILESTONE !== undefined
+        ? String(env.MILESTONE).trim()
+        : fileConfig.triage?.milestone !== undefined
+        ? String(fileConfig.triage.milestone).trim()
+        : DEFAULT_CONFIG.milestone,
+    // Branch creation
+    createBranch:
+      overrides.createBranch !== undefined
+        ? parseBoolean(overrides.createBranch, DEFAULT_CONFIG.createBranch)
+        : env.CREATE_BRANCH !== undefined
+        ? parseBoolean(env.CREATE_BRANCH, DEFAULT_CONFIG.createBranch)
+        : fileConfig.triage?.createBranch !== undefined
+        ? parseBoolean(fileConfig.triage.createBranch, DEFAULT_CONFIG.createBranch)
+        : DEFAULT_CONFIG.createBranch,
+    branchPrefix:
+      overrides.branchPrefix ||
+      env.BRANCH_PREFIX ||
+      fileConfig.triage?.branchPrefix ||
+      DEFAULT_CONFIG.branchPrefix
   };
 
   // Ensure temperature stays in valid range

@@ -22913,7 +22913,20 @@ var DEFAULT_CONFIG = {
   enhanceTitle: false,
   addLabels: [],
   ignoreAuthors: [],
-  ignoreLabels: []
+  ignoreLabels: [],
+  // Triage & Project Settings
+  projectUrl: "",
+  projectToken: "",
+  projectNumber: null,
+  projectOwner: "",
+  priorityField: "Priority",
+  sizeField: "Size",
+  autoAssign: false,
+  assignees: [],
+  assignmentRules: [],
+  milestone: "",
+  createBranch: false,
+  branchPrefix: "issue-"
 };
 function parseBoolean(val, defaultValue = true) {
   if (val === void 0 || val === null || val === "") return defaultValue;
@@ -22957,7 +22970,23 @@ function loadConfig(overrides = {}) {
     enhanceTitle: overrides.enhanceTitle !== void 0 ? parseBoolean(overrides.enhanceTitle, DEFAULT_CONFIG.enhanceTitle) : env2.ENHANCE_TITLE !== void 0 ? parseBoolean(env2.ENHANCE_TITLE, DEFAULT_CONFIG.enhanceTitle) : fileConfig.enhanceTitle !== void 0 ? parseBoolean(fileConfig.enhanceTitle, DEFAULT_CONFIG.enhanceTitle) : DEFAULT_CONFIG.enhanceTitle,
     addLabels: overrides.addLabels !== void 0 ? parseList(overrides.addLabels) : env2.ADD_LABELS !== void 0 ? parseList(env2.ADD_LABELS) : fileConfig.addLabels !== void 0 ? parseList(fileConfig.addLabels) : DEFAULT_CONFIG.addLabels,
     ignoreAuthors: overrides.ignoreAuthors !== void 0 ? parseList(overrides.ignoreAuthors) : env2.IGNORE_AUTHORS !== void 0 ? parseList(env2.IGNORE_AUTHORS) : fileConfig.ignoreAuthors !== void 0 ? parseList(fileConfig.ignoreAuthors) : DEFAULT_CONFIG.ignoreAuthors,
-    ignoreLabels: overrides.ignoreLabels !== void 0 ? parseList(overrides.ignoreLabels) : env2.IGNORE_LABELS !== void 0 ? parseList(env2.IGNORE_LABELS) : fileConfig.ignoreLabels !== void 0 ? parseList(fileConfig.ignoreLabels) : DEFAULT_CONFIG.ignoreLabels
+    ignoreLabels: overrides.ignoreLabels !== void 0 ? parseList(overrides.ignoreLabels) : env2.IGNORE_LABELS !== void 0 ? parseList(env2.IGNORE_LABELS) : fileConfig.ignoreLabels !== void 0 ? parseList(fileConfig.ignoreLabels) : DEFAULT_CONFIG.ignoreLabels,
+    // GitHub Projects v2
+    projectUrl: overrides.projectUrl || env2.PROJECT_URL || fileConfig.project?.url || fileConfig.projectUrl || DEFAULT_CONFIG.projectUrl,
+    projectToken: overrides.projectToken || env2.PROJECT_TOKEN || fileConfig.project?.token || env2.GITHUB_TOKEN || DEFAULT_CONFIG.projectToken,
+    projectNumber: overrides.projectNumber !== void 0 ? overrides.projectNumber : env2.PROJECT_NUMBER !== void 0 ? env2.PROJECT_NUMBER : fileConfig.project?.number || DEFAULT_CONFIG.projectNumber,
+    projectOwner: overrides.projectOwner || env2.PROJECT_OWNER || fileConfig.project?.owner || DEFAULT_CONFIG.projectOwner,
+    priorityField: overrides.priorityField || env2.PROJECT_PRIORITY_FIELD || fileConfig.project?.priorityField || DEFAULT_CONFIG.priorityField,
+    sizeField: overrides.sizeField || env2.PROJECT_SIZE_FIELD || fileConfig.project?.sizeField || DEFAULT_CONFIG.sizeField,
+    // Automated Triage & Assignment
+    autoAssign: overrides.autoAssign !== void 0 ? parseBoolean(overrides.autoAssign, DEFAULT_CONFIG.autoAssign) : env2.AUTO_ASSIGN !== void 0 ? parseBoolean(env2.AUTO_ASSIGN, DEFAULT_CONFIG.autoAssign) : fileConfig.triage?.autoAssign !== void 0 ? parseBoolean(fileConfig.triage.autoAssign, DEFAULT_CONFIG.autoAssign) : DEFAULT_CONFIG.autoAssign,
+    assignees: overrides.assignees !== void 0 ? parseList(overrides.assignees) : env2.ASSIGNEES !== void 0 ? parseList(env2.ASSIGNEES) : fileConfig.triage?.assignees !== void 0 ? parseList(fileConfig.triage.assignees) : DEFAULT_CONFIG.assignees,
+    assignmentRules: fileConfig.triage?.assignmentRules || fileConfig.assignmentRules || DEFAULT_CONFIG.assignmentRules,
+    // Milestones
+    milestone: overrides.milestone !== void 0 ? String(overrides.milestone).trim() : env2.MILESTONE !== void 0 ? String(env2.MILESTONE).trim() : fileConfig.triage?.milestone !== void 0 ? String(fileConfig.triage.milestone).trim() : DEFAULT_CONFIG.milestone,
+    // Branch creation
+    createBranch: overrides.createBranch !== void 0 ? parseBoolean(overrides.createBranch, DEFAULT_CONFIG.createBranch) : env2.CREATE_BRANCH !== void 0 ? parseBoolean(env2.CREATE_BRANCH, DEFAULT_CONFIG.createBranch) : fileConfig.triage?.createBranch !== void 0 ? parseBoolean(fileConfig.triage.createBranch, DEFAULT_CONFIG.createBranch) : DEFAULT_CONFIG.createBranch,
+    branchPrefix: overrides.branchPrefix || env2.BRANCH_PREFIX || fileConfig.triage?.branchPrefix || DEFAULT_CONFIG.branchPrefix
   };
   if (isNaN(config.temperature) || config.temperature < 0 || config.temperature > 1) {
     config.temperature = DEFAULT_CONFIG.temperature;
@@ -46352,12 +46381,17 @@ function getApiKeyFromEnv() {
 }
 
 // src/gemini.js
-var SYSTEM_INSTRUCTION = `You are an expert GitHub issue formatter, evaluator, and technical rewording assistant.
-Your task is threefold:
+var SYSTEM_INSTRUCTION = `You are an expert GitHub issue formatter, evaluator, and technical triage assistant.
+Your task is fourfold:
 1. Evaluate whether the original issue description is ALREADY thorough and well-explained on its own ('YES' or 'NO').
    Criteria: An issue is considered thorough ('YES') if it contains more than 2 well-written, descriptive paragraphs or has equivalent well-structured explanation (e.g., clear problem statement, steps to reproduce, or clear technical specifications) and does not need structural rewording or formatting. If the issue is brief, shorthand, fragmented, lacking clarity or structure, or has 2 or fewer brief paragraphs without clear organization, mark it as 'NO'.
 2. Re-format and reword the issue title and description into a clean, professional, and well-structured GitHub issue format WITHOUT ADDING NEW CONTENT, ASSUMPTIONS, OR FABRICATIONS to the issue description.
 3. If applicable, provide brief, actionable instructions/guidance for anyone who wants to fix or address the issue.
+4. Perform automated triage classification based on the issue content:
+   - Match and select the most relevant labels from the available repository labels provided.
+   - Estimate the priority (P0: Blocker/Critical/Urgent, P1: High, P2: Medium/Normal, P3: Low/Minor).
+   - Estimate the scope/size (XS: Tiny/Trivial, S: Small, M: Medium, L: Large, XL: Very Large/Epic).
+   - If candidate milestones are provided, select the best matching milestone.
 
 STRICT CONSTRAINTS FOR THE ISSUE BODY:
 1. STRICTLY NO NEW CONTENT IN ISSUE BODY: Do NOT hallucinate, invent, or assume any new facts, symptoms, reproduction steps, technical solutions, error logs, environment details, or requirements that the author did not explicitly state or provide.
@@ -46372,7 +46406,12 @@ GUIDELINES FOR FIX INSTRUCTIONS:
    - Probable area or component to inspect based on the context.
    - Key steps or considerations for a contributor to implement the fix.
    - How to test or verify the resolution.
-4. TONE: Direct, helpful, and targeted at a developer or contributor wanting to resolve the issue.`;
+4. TONE: Direct, helpful, and targeted at a developer or contributor wanting to resolve the issue.
+
+TRIAGE CLASSIFICATION GUIDELINES:
+- LABELS: Pick only labels that accurately describe the type, component, or status based on available labels.
+- PRIORITY: Assign P0 for crashes/data loss/security, P1 for major broken functionality, P2 for normal bugs/features, P3 for typos/minor enhancements.
+- SIZE: XS (1-line / simple fix), S (small self-contained fix), M (standard feature/bug fix), L (multi-component change), XL (large architectural refactor).`;
 var DEFAULT_MODELS = [
   process.env.GEMINI_MODEL,
   "gemini-3.1-flash-lite",
@@ -46393,13 +46432,21 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
   let enhancedTitle = null;
   let enhancedBody = rawText;
   let fixInstructions = null;
-  const thoroughMatch = rawText.match(/===IS_THOROUGH===\s*([\s\S]*?)(?====ENHANCED_TITLE===|===ENHANCED_BODY===|===FIX_INSTRUCTIONS===|$)/i);
+  let recommendedLabels = [];
+  let estimatedPriority = null;
+  let estimatedSize = null;
+  let recommendedMilestone = null;
+  const thoroughMatch = rawText.match(/===IS_THOROUGH===\s*([\s\S]*?)(?====ENHANCED_TITLE===|===ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
   if (thoroughMatch && thoroughMatch[1].trim()) {
     isThorough = thoroughMatch[1].trim().toUpperCase().startsWith("YES");
   }
-  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|$)/i);
-  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|$)/i);
-  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)$/i);
+  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
+  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
+  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)(?====RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
+  const labelsMatch = rawText.match(/===RECOMMENDED_LABELS===\s*([\s\S]*?)(?====ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
+  const priorityMatch = rawText.match(/===ESTIMATED_PRIORITY===\s*([\s\S]*?)(?====ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
+  const sizeMatch = rawText.match(/===ESTIMATED_SIZE===\s*([\s\S]*?)(?====RECOMMENDED_MILESTONE===|$)/i);
+  const milestoneMatch = rawText.match(/===RECOMMENDED_MILESTONE===\s*([\s\S]*?)$/i);
   if (enhanceTitle && titleMatch && titleMatch[1].trim()) {
     enhancedTitle = titleMatch[1].trim();
   }
@@ -46410,6 +46457,10 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
     if (thoroughMatch) cleaned = cleaned.replace(thoroughMatch[0], "");
     if (titleMatch) cleaned = cleaned.replace(titleMatch[0], "");
     if (fixMatch) cleaned = cleaned.replace(fixMatch[0], "");
+    if (labelsMatch) cleaned = cleaned.replace(labelsMatch[0], "");
+    if (priorityMatch) cleaned = cleaned.replace(priorityMatch[0], "");
+    if (sizeMatch) cleaned = cleaned.replace(sizeMatch[0], "");
+    if (milestoneMatch) cleaned = cleaned.replace(milestoneMatch[0], "");
     enhancedBody = cleaned.trim();
   } else if (!bodyMatch && !titleMatch && !fixMatch) {
     const legacyMatch = rawText.match(/^TITLE:\s*(.+?)(?:\r?\n)+BODY:\s*([\s\S]+)$/i);
@@ -46421,11 +46472,45 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
   if (fixMatch && fixMatch[1].trim()) {
     fixInstructions = normalizeFixInstructions(fixMatch[1]);
   }
+  if (labelsMatch && labelsMatch[1].trim()) {
+    const rawLabels = labelsMatch[1].trim();
+    if (rawLabels.toLowerCase() !== "none") {
+      recommendedLabels = rawLabels.split(",").map((l) => l.trim().replace(/^["'`]|["'`]$/g, "")).filter((l) => l && l.toLowerCase() !== "none");
+    }
+  }
+  if (priorityMatch && priorityMatch[1].trim()) {
+    const p = priorityMatch[1].trim().toUpperCase();
+    if (["P0", "P1", "P2", "P3"].includes(p)) {
+      estimatedPriority = p;
+    } else {
+      const matchP = p.match(/\b(P[0-3]|CRITICAL|HIGH|MEDIUM|LOW)\b/i);
+      if (matchP) estimatedPriority = matchP[1].toUpperCase();
+    }
+  }
+  if (sizeMatch && sizeMatch[1].trim()) {
+    const s2 = sizeMatch[1].trim().toUpperCase();
+    if (["XS", "S", "M", "L", "XL"].includes(s2)) {
+      estimatedSize = s2;
+    } else {
+      const matchS = s2.match(/\b(XS|S|M|L|XL|SMALL|MEDIUM|LARGE)\b/i);
+      if (matchS) estimatedSize = matchS[1].toUpperCase();
+    }
+  }
+  if (milestoneMatch && milestoneMatch[1].trim()) {
+    const m2 = milestoneMatch[1].trim();
+    if (m2.toLowerCase() !== "none" && m2.toLowerCase() !== "n/a") {
+      recommendedMilestone = m2;
+    }
+  }
   return {
     isThorough,
     enhancedTitle,
     enhancedBody,
-    fixInstructions
+    fixInstructions,
+    recommendedLabels,
+    estimatedPriority,
+    estimatedSize,
+    recommendedMilestone
   };
 }
 async function enhanceIssue(title, body, options = {}) {
@@ -46437,6 +46522,8 @@ async function enhanceIssue(title, body, options = {}) {
   const customInstruction = options.customInstruction || "";
   const temperature = typeof options.temperature === "number" && !isNaN(options.temperature) ? options.temperature : 0.2;
   const enhanceTitle = Boolean(options.enhanceTitle);
+  const availableLabels = Array.isArray(options.availableLabels) ? options.availableLabels : [];
+  const candidateMilestones = Array.isArray(options.candidateMilestones) ? options.candidateMilestones : [];
   let systemInstruction = SYSTEM_INSTRUCTION;
   if (customInstruction.trim()) {
     systemInstruction += `
@@ -46444,47 +46531,46 @@ async function enhanceIssue(title, body, options = {}) {
 ADDITIONAL USER GUIDELINES:
 ${customInstruction.trim()}`;
   }
-  let prompt = "";
-  if (enhanceTitle) {
-    prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue for clarity, readability, and structure, and provide brief fix instructions if applicable.
-
-Return your response strictly in the following format with the exact delimiter tags:
-
-===IS_THOROUGH===
-<strictly 'YES' if the original issue description is already thorough and well-explained on its own (contains more than 2 well-written descriptive paragraphs or equivalent clear structure); otherwise strictly 'NO'>
-
-===ENHANCED_TITLE===
+  const labelsContext = availableLabels.length > 0 ? `Available Repository Labels (choose only the most relevant ones):
+${availableLabels.join(", ")}` : `(No predefined labels available. If applicable, recommend standard labels like bug, documentation, enhancement, etc.)`;
+  const milestonesContext = candidateMilestones.length > 0 ? `Candidate Open Milestones:
+${candidateMilestones.join(", ")}` : `(No open milestones available)`;
+  const titleSection = enhanceTitle ? `===ENHANCED_TITLE===
 <rewritten clear, concise, and professional issue title>
 
-===ENHANCED_BODY===
-<rewritten markdown issue description without adding new facts or assumptions>
+` : "";
+  const prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue description for clarity and structure, provide brief fix instructions if applicable, and determine triage metadata (labels, priority, size, milestone).
 
-===FIX_INSTRUCTIONS===
-<brief, practical instructions for anyone who wants to fix this issue, OR strictly 'NOT_APPLICABLE' if instructions are not applicable or if there is insufficient context>
-
-Issue Title: ${title || "(No title provided)"}
-
-Issue Content:
-${body || "(No description provided)"}`;
-  } else {
-    prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue description for clarity, readability, and structure, and provide brief fix instructions if applicable.
+${labelsContext}
+${milestonesContext}
 
 Return your response strictly in the following format with the exact delimiter tags:
 
 ===IS_THOROUGH===
 <strictly 'YES' if the original issue description is already thorough and well-explained on its own (contains more than 2 well-written descriptive paragraphs or equivalent clear structure); otherwise strictly 'NO'>
 
-===ENHANCED_BODY===
+${titleSection}===ENHANCED_BODY===
 <rewritten markdown issue description without adding new facts or assumptions>
 
 ===FIX_INSTRUCTIONS===
 <brief, practical instructions for anyone who wants to fix this issue, OR strictly 'NOT_APPLICABLE' if instructions are not applicable or if there is insufficient context>
 
+===RECOMMENDED_LABELS===
+<comma-separated list of 1-3 matching labels from the available repository labels, or 'NONE'>
+
+===ESTIMATED_PRIORITY===
+<strictly one of: 'P0', 'P1', 'P2', 'P3'>
+
+===ESTIMATED_SIZE===
+<strictly one of: 'XS', 'S', 'M', 'L', 'XL'>
+
+===RECOMMENDED_MILESTONE===
+<exact name of matching milestone from Candidate Open Milestones, or 'NONE'>
+
 Issue Title: ${title || "(No title provided)"}
 
 Issue Content:
 ${body || "(No description provided)"}`;
-  }
   const candidateModels = Array.from(
     new Set([options.model, ...DEFAULT_MODELS].filter(Boolean))
   );
@@ -46502,13 +46588,17 @@ ${body || "(No description provided)"}`;
       });
       if (response && response.text) {
         const rawText = response.text.trim();
-        console.log(`[Gemini] Successfully formatted issue and generated instructions with model: ${model}`);
+        console.log(`[Gemini] Successfully formatted issue and generated triage metadata with model: ${model}`);
         const parsed = parseGeminiResponse(rawText, enhanceTitle);
         return {
           isThorough: parsed.isThorough,
           enhancedTitle: parsed.enhancedTitle,
           enhancedBody: parsed.enhancedBody,
           fixInstructions: parsed.fixInstructions,
+          recommendedLabels: parsed.recommendedLabels,
+          estimatedPriority: parsed.estimatedPriority,
+          estimatedSize: parsed.estimatedSize,
+          recommendedMilestone: parsed.recommendedMilestone,
           modelUsed: model
         };
       }
@@ -46517,7 +46607,7 @@ ${body || "(No description provided)"}`;
       lastError = err;
     }
   }
-  throw new Error(`All Gemini models failed. Last error: ${lastError?.message || "Unknown error"}`);
+  throw new Error(`All Gemini models failed. Last error: ${lastError?.message}`);
 }
 
 // node_modules/universal-user-agent/index.js
@@ -50067,6 +50157,287 @@ var Octokit2 = Octokit.plugin(requestLog, legacyRestEndpointMethods, paginateRes
   }
 );
 
+// src/projects.js
+function parseProjectIdentifier(projectUrl, projectNumber, projectOwner) {
+  if (projectUrl && typeof projectUrl === "string") {
+    const trimmed = projectUrl.trim();
+    const orgMatch = trimmed.match(/github\.com\/orgs\/([^/]+)\/projects\/(\d+)/i);
+    if (orgMatch) {
+      return { ownerType: "org", owner: orgMatch[1], number: parseInt(orgMatch[2], 10) };
+    }
+    const userMatch = trimmed.match(/github\.com\/users\/([^/]+)\/projects\/(\d+)/i);
+    if (userMatch) {
+      return { ownerType: "user", owner: userMatch[1], number: parseInt(userMatch[2], 10) };
+    }
+    const shortMatch = trimmed.match(/^([^/]+)\/(\d+)$/);
+    if (shortMatch) {
+      return { ownerType: "unknown", owner: shortMatch[1], number: parseInt(shortMatch[2], 10) };
+    }
+  }
+  if (projectNumber && projectOwner) {
+    const num = parseInt(projectNumber, 10);
+    if (!isNaN(num)) {
+      return { ownerType: "unknown", owner: String(projectOwner).trim(), number: num };
+    }
+  }
+  return null;
+}
+async function getProjectV2Details(octokit, { ownerType, owner, number }) {
+  const queryOrg = `
+    query getOrgProject($owner: String!, $number: Int!) {
+      organization(login: $owner) {
+        projectV2(number: $number) {
+          id
+          title
+          fields(first: 50) {
+            nodes {
+              ... on ProjectV2Field {
+                id
+                name
+                dataType
+              }
+              ... on ProjectV2SingleSelectField {
+                id
+                name
+                dataType
+                options {
+                  id
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+  const queryUser = `
+    query getUserProject($owner: String!, $number: Int!) {
+      user(login: $owner) {
+        projectV2(number: $number) {
+          id
+          title
+          fields(first: 50) {
+            nodes {
+              ... on ProjectV2Field {
+                id
+                name
+                dataType
+              }
+              ... on ProjectV2SingleSelectField {
+                id
+                name
+                dataType
+                options {
+                  id
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+  let project = null;
+  if (ownerType === "org") {
+    const res = await octokit.graphql(queryOrg, { owner, number });
+    project = res?.organization?.projectV2;
+  } else if (ownerType === "user") {
+    const res = await octokit.graphql(queryUser, { owner, number });
+    project = res?.user?.projectV2;
+  } else {
+    try {
+      const res = await octokit.graphql(queryOrg, { owner, number });
+      project = res?.organization?.projectV2;
+    } catch {
+      const res = await octokit.graphql(queryUser, { owner, number });
+      project = res?.user?.projectV2;
+    }
+  }
+  if (!project) {
+    throw new Error(`Project #${number} not found for owner "${owner}". Verify project number and permissions.`);
+  }
+  const fields = (project.fields?.nodes || []).filter(Boolean);
+  return {
+    id: project.id,
+    title: project.title,
+    fields
+  };
+}
+function matchSelectOption(options, targetValue) {
+  if (!Array.isArray(options) || !targetValue) return null;
+  const target = targetValue.trim().toLowerCase();
+  const exact = options.find((o) => o.name.toLowerCase() === target);
+  if (exact) return exact.id;
+  const prefixMatch = options.find((o) => {
+    const optLower = o.name.toLowerCase();
+    return optLower.startsWith(target) || target.startsWith(optLower);
+  });
+  if (prefixMatch) return prefixMatch.id;
+  const priorityGroups = [
+    ["p0", "critical", "urgent", "highest", "blocker"],
+    ["p1", "high", "important"],
+    ["p2", "medium", "normal", "moderate"],
+    ["p3", "low", "lowest", "minor"]
+  ];
+  const matchedPriGroup = priorityGroups.find(
+    (grp) => grp.some((term) => target.includes(term) || term.includes(target))
+  );
+  if (matchedPriGroup) {
+    const groupMatch = options.find((o) => {
+      const optLower = o.name.toLowerCase();
+      return matchedPriGroup.some((term) => optLower.includes(term) || term.includes(optLower));
+    });
+    if (groupMatch) return groupMatch.id;
+  }
+  const sizeGroups = [
+    ["xs", "tiny", "trivial"],
+    ["s", "small"],
+    ["m", "medium", "standard"],
+    ["l", "large"],
+    ["xl", "extra large", "epic"]
+  ];
+  const matchedSizeGroup = sizeGroups.find(
+    (grp) => grp.some((term) => target === term || target.startsWith(term))
+  );
+  if (matchedSizeGroup) {
+    const sizeMatch = options.find((o) => {
+      const optLower = o.name.toLowerCase();
+      return matchedSizeGroup.some((term) => optLower === term || optLower.startsWith(term));
+    });
+    if (sizeMatch) return sizeMatch.id;
+  }
+  return null;
+}
+async function assignIssueToProject({
+  token,
+  issueNodeId,
+  projectUrl,
+  projectNumber,
+  projectOwner,
+  priority,
+  size,
+  priorityFieldName = "Priority",
+  sizeFieldName = "Size"
+}) {
+  if (!token) {
+    console.warn("[Project] Warning: No token provided for project assignment. Skipping.");
+    return null;
+  }
+  const projectIdent = parseProjectIdentifier(projectUrl, projectNumber, projectOwner);
+  if (!projectIdent) {
+    console.warn("[Project] Warning: Invalid project configuration. Provide a valid project URL or owner/number.");
+    return null;
+  }
+  try {
+    const octokit = new Octokit2({ auth: token });
+    console.log(`[Project] Locating GitHub Project #${projectIdent.number} (${projectIdent.owner})...`);
+    const projectDetails = await getProjectV2Details(octokit, projectIdent);
+    console.log(`[Project] Found project "${projectDetails.title}" (ID: ${projectDetails.id}).`);
+    const addItemMutation = `
+      mutation addItem($projectId: ID!, $contentId: ID!) {
+        addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+          item {
+            id
+          }
+        }
+      }
+    `;
+    console.log(`[Project] Adding issue to project "${projectDetails.title}"...`);
+    const addResult = await octokit.graphql(addItemMutation, {
+      projectId: projectDetails.id,
+      contentId: issueNodeId
+    });
+    const itemId = addResult?.addProjectV2ItemById?.item?.id;
+    if (!itemId) {
+      console.warn("[Project] Warning: Failed to obtain project item ID after adding issue.");
+      return null;
+    }
+    console.log(`[Project] Successfully added issue to project (Item ID: ${itemId}).`);
+    const updateFieldMutation = `
+      mutation updateField($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: ProjectV2FieldValueInput!) {
+        updateProjectV2ItemFieldValue(input: {
+          projectId: $projectId,
+          itemId: $itemId,
+          fieldId: $fieldId,
+          value: $value
+        }) {
+          projectV2Item {
+            id
+          }
+        }
+      }
+    `;
+    if (priority) {
+      const pField = projectDetails.fields.find(
+        (f3) => f3.name.toLowerCase() === priorityFieldName.toLowerCase()
+      );
+      if (pField) {
+        if (pField.dataType === "SINGLE_SELECT" && pField.options) {
+          const optionId = matchSelectOption(pField.options, priority);
+          if (optionId) {
+            await octokit.graphql(updateFieldMutation, {
+              projectId: projectDetails.id,
+              itemId,
+              fieldId: pField.id,
+              value: { singleSelectOptionId: optionId }
+            });
+            console.log(`[Project] Set ${pField.name} to "${priority}".`);
+          } else {
+            console.log(`[Project] Option "${priority}" did not match available ${pField.name} options.`);
+          }
+        } else if (pField.dataType === "TEXT") {
+          await octokit.graphql(updateFieldMutation, {
+            projectId: projectDetails.id,
+            itemId,
+            fieldId: pField.id,
+            value: { text: priority }
+          });
+          console.log(`[Project] Set ${pField.name} text to "${priority}".`);
+        }
+      } else {
+        console.log(`[Project] Field "${priorityFieldName}" not found on project. Skipping priority attribute.`);
+      }
+    }
+    if (size) {
+      const sField = projectDetails.fields.find(
+        (f3) => f3.name.toLowerCase() === sizeFieldName.toLowerCase()
+      );
+      if (sField) {
+        if (sField.dataType === "SINGLE_SELECT" && sField.options) {
+          const optionId = matchSelectOption(sField.options, size);
+          if (optionId) {
+            await octokit.graphql(updateFieldMutation, {
+              projectId: projectDetails.id,
+              itemId,
+              fieldId: sField.id,
+              value: { singleSelectOptionId: optionId }
+            });
+            console.log(`[Project] Set ${sField.name} to "${size}".`);
+          } else {
+            console.log(`[Project] Option "${size}" did not match available ${sField.name} options.`);
+          }
+        } else if (sField.dataType === "TEXT") {
+          await octokit.graphql(updateFieldMutation, {
+            projectId: projectDetails.id,
+            itemId,
+            fieldId: sField.id,
+            value: { text: size }
+          });
+          console.log(`[Project] Set ${sField.name} text to "${size}".`);
+        }
+      } else {
+        console.log(`[Project] Field "${sizeFieldName}" not found on project. Skipping size attribute.`);
+      }
+    }
+    return { itemId };
+  } catch (err) {
+    console.warn(`[Project] Warning: Failed to assign issue to project:`, err.message);
+    return null;
+  }
+}
+
 // src/github.js
 var ENHANCED_MARKER = "<!-- gemini-enhanced -->";
 function isAlreadyEnhanced(body) {
@@ -50099,6 +50470,146 @@ async function addCommentReaction({ token, repository, commentId, content }) {
     console.warn(`[GitHub] Warning: Could not add reaction '${content}' to comment #${commentId}:`, err.message);
   }
 }
+async function fetchRepositoryLabels({ token, repository }) {
+  if (!token || !repository) return [];
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    const { data } = await octokit.rest.issues.listLabelsForRepo({
+      owner,
+      repo,
+      per_page: 100
+    });
+    return data.map((l) => l.name);
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not fetch repository labels:`, err.message);
+    return [];
+  }
+}
+async function fetchRepositoryMilestones({ token, repository }) {
+  if (!token || !repository) return [];
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    const { data } = await octokit.rest.issues.listMilestones({
+      owner,
+      repo,
+      state: "open",
+      per_page: 50
+    });
+    return data.map((m2) => ({ id: m2.id, number: m2.number, title: m2.title }));
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not fetch repository milestones:`, err.message);
+    return [];
+  }
+}
+async function getIssueDetails({ token, repository, issueNumber }) {
+  if (!token || !repository || !issueNumber) return null;
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    const { data } = await octokit.rest.issues.get({
+      owner,
+      repo,
+      issue_number: parseInt(issueNumber, 10)
+    });
+    return data;
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not fetch details for issue #${issueNumber}:`, err.message);
+    return null;
+  }
+}
+async function assignUsersToIssue({ token, repository, issueNumber, assignees }) {
+  if (!token || !repository || !issueNumber || !Array.isArray(assignees) || assignees.length === 0) return;
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    console.log(`[GitHub] Assigning issue #${issueNumber} to: ${assignees.join(", ")}`);
+    await octokit.rest.issues.addAssignees({
+      owner,
+      repo,
+      issue_number: parseInt(issueNumber, 10),
+      assignees
+    });
+    console.log(`[GitHub] Successfully assigned issue #${issueNumber}.`);
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Failed to assign users to issue #${issueNumber}:`, err.message);
+  }
+}
+async function setIssueMilestone({ token, repository, issueNumber, milestoneNumber }) {
+  if (!token || !repository || !issueNumber || !milestoneNumber) return;
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    console.log(`[GitHub] Setting milestone #${milestoneNumber} on issue #${issueNumber}...`);
+    await octokit.rest.issues.update({
+      owner,
+      repo,
+      issue_number: parseInt(issueNumber, 10),
+      milestone: milestoneNumber
+    });
+    console.log(`[GitHub] Successfully set milestone on issue #${issueNumber}.`);
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Failed to set milestone on issue #${issueNumber}:`, err.message);
+  }
+}
+async function createAndLinkBranch({
+  token,
+  repository,
+  issueNumber,
+  issueTitle,
+  issueNodeId,
+  branchPrefix = "issue-"
+}) {
+  if (!token || !repository || !issueNumber) return null;
+  const [owner, repo] = repository.split("/");
+  const octokit = new Octokit2({ auth: token });
+  try {
+    const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
+    const defaultBranch = repoData.default_branch || "main";
+    const { data: refData } = await octokit.rest.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${defaultBranch}`
+    });
+    const latestCommitSha = refData.object.sha;
+    const slug = (issueTitle || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
+    const branchName = `${branchPrefix}${issueNumber}${slug ? `-${slug}` : ""}`;
+    console.log(`[GitHub] Creating development branch "${branchName}" from "${defaultBranch}" (${latestCommitSha.slice(0, 7)})...`);
+    await octokit.rest.git.createRef({
+      owner,
+      repo,
+      ref: `refs/heads/${branchName}`,
+      sha: latestCommitSha
+    });
+    console.log(`[GitHub] Successfully created branch "${branchName}".`);
+    if (issueNodeId) {
+      try {
+        const linkMutation = `
+          mutation linkBranch($issueId: ID!, $oid: GitObjectID!, $name: String!) {
+            createLinkedBranch(input: { issueId: $issueId, oid: $oid, name: $name }) {
+              linkedBranch {
+                id
+              }
+            }
+          }
+        `;
+        await octokit.graphql(linkMutation, {
+          issueId: issueNodeId,
+          oid: latestCommitSha,
+          name: branchName
+        });
+        console.log(`[GitHub] Successfully linked branch "${branchName}" to issue #${issueNumber}.`);
+      } catch (linkErr) {
+        console.log(`[GitHub] Note: Linked branch association via GraphQL not available (${linkErr.message}). Branch was created in Git.`);
+      }
+    }
+    return branchName;
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Failed to create development branch:`, err.message);
+    return null;
+  }
+}
 async function updateGitHubIssue({
   token,
   repository,
@@ -50127,7 +50638,23 @@ async function updateGitHubIssue({
     preserveOriginal = true,
     addBadge = true,
     addLabels = [],
-    skipBodyUpdate = false
+    recommendedLabels = [],
+    skipBodyUpdate = false,
+    autoAssign = false,
+    assignees = [],
+    milestone = null,
+    candidateMilestones = [],
+    createBranch = false,
+    branchPrefix = "issue-",
+    projectUrl = null,
+    projectNumber = null,
+    projectOwner = null,
+    projectToken = null,
+    estimatedPriority = null,
+    estimatedSize = null,
+    priorityField = "Priority",
+    sizeField = "Size",
+    createdBranchName = null
   } = options;
   const octokit = new Octokit2({ auth: token });
   if (skipBodyUpdate) {
@@ -50170,14 +50697,17 @@ async function updateGitHubIssue({
     await octokit.rest.issues.update(updatePayload);
     console.log(`[GitHub] Successfully updated issue #${num} description.`);
   }
-  if (Array.isArray(addLabels) && addLabels.length > 0) {
+  const combinedLabels = Array.from(
+    new Set([...addLabels, ...recommendedLabels].map((l) => l.trim()).filter(Boolean))
+  );
+  if (combinedLabels.length > 0) {
     try {
-      console.log(`[GitHub] Adding configured label(s) to issue #${num}: ${addLabels.join(", ")}`);
+      console.log(`[GitHub] Adding label(s) to issue #${num}: ${combinedLabels.join(", ")}`);
       await octokit.rest.issues.addLabels({
         owner,
         repo,
         issue_number: num,
-        labels: addLabels
+        labels: combinedLabels
       });
       console.log(`[GitHub] Successfully added labels to issue #${num}.`);
     } catch (lblErr) {
@@ -50193,6 +50723,13 @@ async function updateGitHubIssue({
         "",
         fixInstructions.trim()
       ];
+      if (createdBranchName) {
+        commentLines.push(
+          "",
+          "> [!NOTE]",
+          `> Development branch \`${createdBranchName}\` has been created for this issue.`
+        );
+      }
       const commentContent = commentLines.join("\n");
       console.log(`[GitHub] Posting contributor fix instructions comment to issue #${num}...`);
       await octokit.rest.issues.createComment({
@@ -50236,6 +50773,16 @@ function parseArgs() {
       parsed.addBadge = false;
     } else if (arg === "--add-labels" && i2 + 1 < args.length) {
       parsed.addLabels = args[++i2];
+    } else if (arg === "--auto-assign") {
+      parsed.autoAssign = true;
+    } else if (arg === "--assignees" && i2 + 1 < args.length) {
+      parsed.assignees = args[++i2];
+    } else if (arg === "--milestone" && i2 + 1 < args.length) {
+      parsed.milestone = args[++i2];
+    } else if (arg === "--create-branch") {
+      parsed.createBranch = true;
+    } else if (arg === "--project-url" && i2 + 1 < args.length) {
+      parsed.projectUrl = args[++i2];
     } else if (arg === "--test") {
       parsed.test = true;
     } else if (arg === "--help" || arg === "-h") {
@@ -50256,6 +50803,52 @@ function promptLine(question) {
     });
   });
 }
+function resolveAssignees({ repository, config, labels, title, body }) {
+  const [owner] = repository ? repository.split("/") : [""];
+  const assigneesSet = new Set(config.assignees || []);
+  if (Array.isArray(config.assignmentRules)) {
+    const textToMatch = `${title} ${body}`.toLowerCase();
+    const currentLabels = (labels || []).map((l) => l.toLowerCase());
+    for (const rule of config.assignmentRules) {
+      if (!rule || !Array.isArray(rule.assignees)) continue;
+      let matched = false;
+      if (rule.label && currentLabels.includes(rule.label.toLowerCase())) {
+        matched = true;
+      }
+      if (rule.keyword && textToMatch.includes(rule.keyword.toLowerCase())) {
+        matched = true;
+      }
+      if (matched) {
+        for (const a of rule.assignees) {
+          assigneesSet.add(a);
+        }
+      }
+    }
+  }
+  if (config.autoAssign && assigneesSet.size === 0 && owner) {
+    assigneesSet.add(owner);
+  }
+  return Array.from(assigneesSet);
+}
+function resolveMilestone({ config, candidateMilestones, recommendedMilestone }) {
+  if (!config.milestone) return null;
+  const milestoneSetting = String(config.milestone).trim();
+  if (milestoneSetting.toLowerCase() === "auto") {
+    if (!recommendedMilestone) return null;
+    const match3 = candidateMilestones.find(
+      (m2) => m2.title.toLowerCase() === recommendedMilestone.toLowerCase()
+    );
+    return match3 ? match3.number : null;
+  }
+  const asNumber = parseInt(milestoneSetting, 10);
+  if (!isNaN(asNumber) && String(asNumber) === milestoneSetting) {
+    return asNumber;
+  }
+  const match2 = candidateMilestones.find(
+    (m2) => m2.title.toLowerCase() === milestoneSetting.toLowerCase()
+  );
+  return match2 ? match2.number : null;
+}
 async function runLocal(args) {
   if (args.help) {
     console.log(`
@@ -50273,6 +50866,11 @@ Options:
   --no-original                Disable appending original submission block
   --no-badge                   Disable [!NOTE] header callout badge
   --add-labels <labels>        Comma-separated labels to apply
+  --auto-assign                Enable auto-assignment
+  --assignees <users>          Comma-separated usernames to assign
+  --milestone <name/num/auto>  Milestone to assign
+  --create-branch              Enable development branch creation
+  --project-url <url>          GitHub Project v2 URL
   --test                       Run with a simulated issue
   --help, -h                   Show help information
     `);
@@ -50298,47 +50896,69 @@ Options:
     }
     body = lines.join("\n").trim();
   }
-  console.log(`
-Enhancing issue with Gemini (Model: ${config.geminiModel}, Temp: ${config.temperature})...
-`);
+  if (!title && !body) {
+    console.error("Error: At least an issue title or body is required.");
+    process.exit(1);
+  }
+  console.log("\nEnhancing issue with Gemini Flash Lite...\n");
   try {
-    const { isThorough, enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
+    const {
+      isThorough,
+      enhancedTitle,
+      enhancedBody,
+      fixInstructions,
+      recommendedLabels,
+      estimatedPriority,
+      estimatedSize,
+      recommendedMilestone,
+      modelUsed
+    } = await enhanceIssue(title, body, {
       model: config.geminiModel,
       temperature: config.temperature,
       customInstruction: config.customInstruction,
-      enhanceTitle: config.enhanceTitle
+      enhanceTitle: config.enhanceTitle,
+      availableLabels: config.addLabels.length > 0 ? config.addLabels : ["bug", "documentation", "enhancement", "ui/ux", "frontend", "backend"]
     });
-    console.log("==========================================");
-    console.log(`  ENHANCED ISSUE (Model: ${modelUsed})`);
-    console.log(`  Thoroughness Check: ${isThorough ? "THOROUGH (body preserved in standard runs)" : "NEEDS_ENHANCEMENT"}`);
-    console.log("==========================================");
-    if (enhancedTitle) {
-      console.log(`
-Enhanced Title: ${enhancedTitle}
+    console.log("=========================================");
+    console.log("             ENHANCED ISSUE              ");
+    console.log("=========================================\n");
+    console.log(`Evaluated Thorough: ${isThorough ? "YES (Skip body rewrite)" : "NO (Rewritten for clarity)"}`);
+    if (config.enhanceTitle && enhancedTitle) {
+      console.log(`Enhanced Title: ${enhancedTitle}
 `);
     }
     if (config.addBadge) {
-      console.log("> [!NOTE]\n> **Issue Formatted with Gemini Flash Lite**\n");
+      console.log("> [!NOTE]");
+      console.log("> **Issue Formatted with Gemini Flash Lite**");
+      console.log("> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.\n");
     }
     console.log(enhancedBody);
     if (config.preserveOriginal) {
       console.log("\n---");
-      console.log("<details>\n<summary>\u{1F50D} <b>Original Submission</b></summary>\n");
-      console.log(body || "*(Original body was empty)*");
+      console.log("<details>");
+      console.log("<summary>\u{1F50D} <b>Original Submission</b> (Click to expand)</summary>\n");
+      console.log(body ? body : "*(Original body was empty)*");
       console.log("\n</details>");
     }
-    console.log("\n==========================================");
+    console.log("\n=========================================");
+    console.log("           AUTOMATED TRIAGE              ");
+    console.log("=========================================");
+    console.log(`Recommended Labels: ${recommendedLabels.length > 0 ? recommendedLabels.join(", ") : "None"}`);
+    console.log(`Estimated Priority: ${estimatedPriority || "Unspecified"}`);
+    console.log(`Estimated Size:     ${estimatedSize || "Unspecified"}`);
+    console.log(`Recommended Milestone: ${recommendedMilestone || "None"}`);
     if (config.postComment) {
-      console.log("  CONTRIBUTOR FIX INSTRUCTIONS (COMMENT)");
-      console.log("==========================================");
+      console.log("\n=========================================");
+      console.log("     CONTRIBUTOR FIX INSTRUCTIONS        ");
+      console.log("=========================================\n");
       if (fixInstructions) {
         console.log("> [!TIP]");
-        console.log("> ### \u{1F4A1} Instructions to Fix This Issue\n");
+        console.log("> ### \u{1F4A1} Instructions to Fix This Issue");
+        console.log("> Here are brief instructions to help anyone interested in resolving this issue:\n");
         console.log(fixInstructions);
       } else {
-        console.log("*(No comment would be posted: fix instructions not applicable for this issue)*");
+        console.log("(Instructions not applicable for this issue)");
       }
-      console.log("==========================================");
     }
   } catch (error) {
     console.error("Enhancement failed:", error.message);
@@ -50455,18 +51075,87 @@ async function runGitHubAction() {
       return;
     }
   }
+  console.log(`[GitHub Action] Fetching repository labels and context for ${repository}...`);
+  const availableLabels = await fetchRepositoryLabels({
+    token: process.env.GITHUB_TOKEN,
+    repository
+  });
+  let candidateMilestones = [];
+  if (config.milestone) {
+    candidateMilestones = await fetchRepositoryMilestones({
+      token: process.env.GITHUB_TOKEN,
+      repository
+    });
+  }
+  const issueDetails = await getIssueDetails({
+    token: process.env.GITHUB_TOKEN,
+    repository,
+    issueNumber
+  });
+  const issueNodeId = issueDetails?.node_id || null;
   console.log(`[GitHub Action] Processing issue #${issueNumber}: "${title}" (forceEnhance: ${forceEnhance})`);
-  const { isThorough, enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
+  const {
+    isThorough,
+    enhancedTitle,
+    enhancedBody,
+    fixInstructions,
+    recommendedLabels,
+    estimatedPriority,
+    estimatedSize,
+    recommendedMilestone,
+    modelUsed
+  } = await enhanceIssue(title, body, {
     model: config.geminiModel,
     temperature: config.temperature,
     customInstruction: config.customInstruction,
-    enhanceTitle: config.enhanceTitle
+    enhanceTitle: config.enhanceTitle,
+    availableLabels,
+    candidateMilestones: candidateMilestones.map((m2) => m2.title)
   });
   const skipBodyUpdate = Boolean(isThorough && !forceEnhance);
   if (skipBodyUpdate) {
     console.log(
-      `[GitHub Action] Issue #${issueNumber} was evaluated as thorough on its own. Skipping body and title formatting, posting fix instructions comment if applicable.`
+      `[GitHub Action] Issue #${issueNumber} was evaluated as thorough on its own. Preserving original body/title, updating triage attributes.`
     );
+  }
+  const resolvedAssignees = resolveAssignees({
+    repository,
+    config,
+    labels: [...labels, ...recommendedLabels],
+    title,
+    body
+  });
+  if (resolvedAssignees.length > 0) {
+    await assignUsersToIssue({
+      token: process.env.GITHUB_TOKEN,
+      repository,
+      issueNumber,
+      assignees: resolvedAssignees
+    });
+  }
+  const resolvedMilestoneNumber = resolveMilestone({
+    config,
+    candidateMilestones,
+    recommendedMilestone
+  });
+  if (resolvedMilestoneNumber) {
+    await setIssueMilestone({
+      token: process.env.GITHUB_TOKEN,
+      repository,
+      issueNumber,
+      milestoneNumber: resolvedMilestoneNumber
+    });
+  }
+  let createdBranchName = null;
+  if (config.createBranch) {
+    createdBranchName = await createAndLinkBranch({
+      token: process.env.GITHUB_TOKEN,
+      repository,
+      issueNumber,
+      issueTitle: enhancedTitle || title,
+      issueNodeId,
+      branchPrefix: config.branchPrefix
+    });
   }
   await updateGitHubIssue({
     token: process.env.GITHUB_TOKEN,
@@ -50483,9 +51172,24 @@ async function runGitHubAction() {
       preserveOriginal: config.preserveOriginal,
       addBadge: config.addBadge,
       addLabels: config.addLabels,
-      skipBodyUpdate
+      recommendedLabels,
+      skipBodyUpdate,
+      createdBranchName
     }
   });
+  if ((config.projectUrl || config.projectNumber) && issueNodeId) {
+    await assignIssueToProject({
+      token: config.projectToken,
+      issueNodeId,
+      projectUrl: config.projectUrl,
+      projectNumber: config.projectNumber,
+      projectOwner: config.projectOwner,
+      priority: estimatedPriority,
+      size: estimatedSize,
+      priorityFieldName: config.priorityField,
+      sizeFieldName: config.sizeField
+    });
+  }
   if (isCommentTrigger && commentId && process.env.GITHUB_TOKEN) {
     await addCommentReaction({
       token: process.env.GITHUB_TOKEN,
