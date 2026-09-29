@@ -13,6 +13,61 @@ export function isAlreadyEnhanced(body) {
 }
 
 /**
+ * Extracts raw or unenhanced content from an issue body that may already be enhanced.
+ * Looks for the collapsible <details> "Original Submission" block, or strips out bot badges and markers.
+ * @param {string} body
+ * @returns {string}
+ */
+export function extractRawIssueContent(body) {
+  if (!body) return "";
+
+  // Check for the <details> section containing the original submission
+  const detailsMatch = body.match(
+    /<details>\s*<summary>[\s\S]*?Original Submission[\s\S]*?<\/summary>\s*([\s\S]*?)\s*<\/details>/i
+  );
+  if (
+    detailsMatch &&
+    detailsMatch[1] &&
+    detailsMatch[1].trim() &&
+    detailsMatch[1].trim() !== "*(Original body was empty)*"
+  ) {
+    return detailsMatch[1].trim();
+  }
+
+  // Otherwise, strip out known bot markers, badges, and details blocks
+  let cleaned = body
+    .replace(/<!--\s*gemini-enhanced\s*-->/gi, "")
+    .replace(/>\s*\[!NOTE\][\s\S]*?Original raw submission is preserved below\.\s*/gi, "")
+    .trim();
+
+  return cleaned || body;
+}
+
+/**
+ * Adds an emoji reaction to an issue comment.
+ * @param {object} params
+ * @param {string} params.token
+ * @param {string} params.repository
+ * @param {number|string} params.commentId
+ * @param {'eyes'|'rocket'|'+1'|'-1'|'laugh'|'confused'|'heart'|'hooray'} params.content
+ */
+export async function addCommentReaction({ token, repository, commentId, content }) {
+  if (!token || !repository || !commentId || !content) return;
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit({ auth: token });
+    await octokit.rest.reactions.createForIssueComment({
+      owner,
+      repo,
+      comment_id: parseInt(commentId, 10),
+      content
+    });
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not add reaction '${content}' to comment #${commentId}:`, err.message);
+  }
+}
+
+/**
  * Updates a GitHub issue with the enhanced markdown body, applies optional title changes,
  * adds labels, and posts contributor fix instructions as a comment if applicable.
  * @param {object} params
@@ -30,6 +85,7 @@ export function isAlreadyEnhanced(body) {
  * @param {boolean} [params.options.preserveOriginal=true] - Whether to include collapsible original text
  * @param {boolean} [params.options.addBadge=true] - Whether to prepend [!NOTE] header badge
  * @param {string[]} [params.options.addLabels=[]] - Labels to add to the issue
+ * @param {boolean} [params.options.skipBodyUpdate=false] - Whether to skip rewriting issue body/title
  */
 export async function updateGitHubIssue({
   token,
@@ -60,55 +116,60 @@ export async function updateGitHubIssue({
     postComment = true,
     preserveOriginal = true,
     addBadge = true,
-    addLabels = []
+    addLabels = [],
+    skipBodyUpdate = false
   } = options;
 
   const octokit = new Octokit({ auth: token });
 
-  // Construct new body respecting user settings
-  const bodyParts = [ENHANCED_MARKER];
+  if (skipBodyUpdate) {
+    console.log(`[GitHub] Issue #${num} description was evaluated as thorough. Preserving original issue body and title.`);
+  } else {
+    // Construct new body respecting user settings
+    const bodyParts = [ENHANCED_MARKER];
 
-  if (addBadge) {
-    bodyParts.push(
-      "> [!NOTE]",
-      "> **Issue Formatted with Gemini Flash Lite**",
-      "> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.",
-      ""
-    );
+    if (addBadge) {
+      bodyParts.push(
+        "> [!NOTE]",
+        "> **Issue Formatted with Gemini Flash Lite**",
+        "> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.",
+        ""
+      );
+    }
+
+    bodyParts.push(enhancedBody);
+
+    if (preserveOriginal) {
+      bodyParts.push(
+        "",
+        "---",
+        "<details>",
+        "<summary>🔍 <b>Original Submission</b> (Click to expand)</summary>",
+        "",
+        originalBody ? originalBody : "*(Original body was empty)*",
+        "",
+        "</details>"
+      );
+    }
+
+    const updatedIssueBody = bodyParts.join("\n");
+
+    const updatePayload = {
+      owner,
+      repo,
+      issue_number: num,
+      body: updatedIssueBody
+    };
+
+    const hasTitleUpdate = Boolean(enhancedTitle && enhancedTitle !== originalTitle);
+    if (hasTitleUpdate) {
+      updatePayload.title = enhancedTitle;
+    }
+
+    console.log(`[GitHub] Updating issue #${num} in ${owner}/${repo}...`);
+    await octokit.rest.issues.update(updatePayload);
+    console.log(`[GitHub] Successfully updated issue #${num} description.`);
   }
-
-  bodyParts.push(enhancedBody);
-
-  if (preserveOriginal) {
-    bodyParts.push(
-      "",
-      "---",
-      "<details>",
-      "<summary>🔍 <b>Original Submission</b> (Click to expand)</summary>",
-      "",
-      originalBody ? originalBody : "*(Original body was empty)*",
-      "",
-      "</details>"
-    );
-  }
-
-  const updatedIssueBody = bodyParts.join("\n");
-
-  const updatePayload = {
-    owner,
-    repo,
-    issue_number: num,
-    body: updatedIssueBody
-  };
-
-  const hasTitleUpdate = Boolean(enhancedTitle && enhancedTitle !== originalTitle);
-  if (hasTitleUpdate) {
-    updatePayload.title = enhancedTitle;
-  }
-
-  console.log(`[GitHub] Updating issue #${num} in ${owner}/${repo}...`);
-  await octokit.rest.issues.update(updatePayload);
-  console.log(`[GitHub] Successfully updated issue #${num} description.`);
 
   // Apply optional labels if configured
   if (Array.isArray(addLabels) && addLabels.length > 0) {

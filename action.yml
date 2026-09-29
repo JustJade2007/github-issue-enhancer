@@ -1,5 +1,5 @@
 name: 'GitHub Issue Enhancer'
-description: 'Rewords and formats new GitHub issues using Gemini Flash Lite without adding new content.'
+description: 'Rewords and formats GitHub issues using Gemini Flash Lite, evaluates issue thoroughness, and supports /enhance comment triggers.'
 author: 'JustJade2007'
 branding:
   icon: 'alert-circle'
@@ -72,6 +72,10 @@ runs:
         ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
         ISSUE_LABELS: ${{ toJson(github.event.issue.labels) }}
         REPOSITORY: ${{ github.repository }}
+        COMMENT_BODY: ${{ github.event.comment.body }}
+        COMMENT_ID: ${{ github.event.comment.id }}
+        COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+        COMMENT_AUTHOR_ASSOCIATION: ${{ github.event.comment.author_association }}
         GEMINI_MODEL: ${{ inputs.gemini-model }}
         TEMPERATURE: ${{ inputs.temperature }}
         CUSTOM_INSTRUCTION: ${{ inputs.custom-instruction }}

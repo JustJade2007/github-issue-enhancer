@@ -46352,10 +46352,12 @@ function getApiKeyFromEnv() {
 }
 
 // src/gemini.js
-var SYSTEM_INSTRUCTION = `You are an expert GitHub issue formatter and technical rewording assistant.
-Your task is twofold:
-1. Re-format and reword the issue title and description into a clean, professional, and well-structured GitHub issue format WITHOUT ADDING NEW CONTENT, ASSUMPTIONS, OR FABRICATIONS to the issue description.
-2. If applicable, provide brief, actionable instructions/guidance for anyone who wants to fix or address the issue.
+var SYSTEM_INSTRUCTION = `You are an expert GitHub issue formatter, evaluator, and technical rewording assistant.
+Your task is threefold:
+1. Evaluate whether the original issue description is ALREADY thorough and well-explained on its own ('YES' or 'NO').
+   Criteria: An issue is considered thorough ('YES') if it contains more than 2 well-written, descriptive paragraphs or has equivalent well-structured explanation (e.g., clear problem statement, steps to reproduce, or clear technical specifications) and does not need structural rewording or formatting. If the issue is brief, shorthand, fragmented, lacking clarity or structure, or has 2 or fewer brief paragraphs without clear organization, mark it as 'NO'.
+2. Re-format and reword the issue title and description into a clean, professional, and well-structured GitHub issue format WITHOUT ADDING NEW CONTENT, ASSUMPTIONS, OR FABRICATIONS to the issue description.
+3. If applicable, provide brief, actionable instructions/guidance for anyone who wants to fix or address the issue.
 
 STRICT CONSTRAINTS FOR THE ISSUE BODY:
 1. STRICTLY NO NEW CONTENT IN ISSUE BODY: Do NOT hallucinate, invent, or assume any new facts, symptoms, reproduction steps, technical solutions, error logs, environment details, or requirements that the author did not explicitly state or provide.
@@ -46387,9 +46389,14 @@ function normalizeFixInstructions(text) {
   return trimmed;
 }
 function parseGeminiResponse(rawText, enhanceTitle = false) {
+  let isThorough = false;
   let enhancedTitle = null;
   let enhancedBody = rawText;
   let fixInstructions = null;
+  const thoroughMatch = rawText.match(/===IS_THOROUGH===\s*([\s\S]*?)(?====ENHANCED_TITLE===|===ENHANCED_BODY===|===FIX_INSTRUCTIONS===|$)/i);
+  if (thoroughMatch && thoroughMatch[1].trim()) {
+    isThorough = thoroughMatch[1].trim().toUpperCase().startsWith("YES");
+  }
   const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|$)/i);
   const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|$)/i);
   const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)$/i);
@@ -46400,6 +46407,7 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
     enhancedBody = bodyMatch[1].trim();
   } else if (!bodyMatch && (titleMatch || fixMatch)) {
     let cleaned = rawText;
+    if (thoroughMatch) cleaned = cleaned.replace(thoroughMatch[0], "");
     if (titleMatch) cleaned = cleaned.replace(titleMatch[0], "");
     if (fixMatch) cleaned = cleaned.replace(fixMatch[0], "");
     enhancedBody = cleaned.trim();
@@ -46414,6 +46422,7 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
     fixInstructions = normalizeFixInstructions(fixMatch[1]);
   }
   return {
+    isThorough,
     enhancedTitle,
     enhancedBody,
     fixInstructions
@@ -46437,9 +46446,12 @@ ${customInstruction.trim()}`;
   }
   let prompt = "";
   if (enhanceTitle) {
-    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure, and provide brief fix instructions if applicable.
+    prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue for clarity, readability, and structure, and provide brief fix instructions if applicable.
 
 Return your response strictly in the following format with the exact delimiter tags:
+
+===IS_THOROUGH===
+<strictly 'YES' if the original issue description is already thorough and well-explained on its own (contains more than 2 well-written descriptive paragraphs or equivalent clear structure); otherwise strictly 'NO'>
 
 ===ENHANCED_TITLE===
 <rewritten clear, concise, and professional issue title>
@@ -46455,9 +46467,12 @@ Issue Title: ${title || "(No title provided)"}
 Issue Content:
 ${body || "(No description provided)"}`;
   } else {
-    prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure, and provide brief fix instructions if applicable.
+    prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue description for clarity, readability, and structure, and provide brief fix instructions if applicable.
 
 Return your response strictly in the following format with the exact delimiter tags:
+
+===IS_THOROUGH===
+<strictly 'YES' if the original issue description is already thorough and well-explained on its own (contains more than 2 well-written descriptive paragraphs or equivalent clear structure); otherwise strictly 'NO'>
 
 ===ENHANCED_BODY===
 <rewritten markdown issue description without adding new facts or assumptions>
@@ -46490,6 +46505,7 @@ ${body || "(No description provided)"}`;
         console.log(`[Gemini] Successfully formatted issue and generated instructions with model: ${model}`);
         const parsed = parseGeminiResponse(rawText, enhanceTitle);
         return {
+          isThorough: parsed.isThorough,
           enhancedTitle: parsed.enhancedTitle,
           enhancedBody: parsed.enhancedBody,
           fixInstructions: parsed.fixInstructions,
@@ -50057,6 +50073,32 @@ function isAlreadyEnhanced(body) {
   if (!body) return false;
   return body.includes(ENHANCED_MARKER);
 }
+function extractRawIssueContent(body) {
+  if (!body) return "";
+  const detailsMatch = body.match(
+    /<details>\s*<summary>[\s\S]*?Original Submission[\s\S]*?<\/summary>\s*([\s\S]*?)\s*<\/details>/i
+  );
+  if (detailsMatch && detailsMatch[1] && detailsMatch[1].trim() && detailsMatch[1].trim() !== "*(Original body was empty)*") {
+    return detailsMatch[1].trim();
+  }
+  let cleaned = body.replace(/<!--\s*gemini-enhanced\s*-->/gi, "").replace(/>\s*\[!NOTE\][\s\S]*?Original raw submission is preserved below\.\s*/gi, "").trim();
+  return cleaned || body;
+}
+async function addCommentReaction({ token, repository, commentId, content }) {
+  if (!token || !repository || !commentId || !content) return;
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    await octokit.rest.reactions.createForIssueComment({
+      owner,
+      repo,
+      comment_id: parseInt(commentId, 10),
+      content
+    });
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not add reaction '${content}' to comment #${commentId}:`, err.message);
+  }
+}
 async function updateGitHubIssue({
   token,
   repository,
@@ -50084,45 +50126,50 @@ async function updateGitHubIssue({
     postComment = true,
     preserveOriginal = true,
     addBadge = true,
-    addLabels = []
+    addLabels = [],
+    skipBodyUpdate = false
   } = options;
   const octokit = new Octokit2({ auth: token });
-  const bodyParts = [ENHANCED_MARKER];
-  if (addBadge) {
-    bodyParts.push(
-      "> [!NOTE]",
-      "> **Issue Formatted with Gemini Flash Lite**",
-      "> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.",
-      ""
-    );
+  if (skipBodyUpdate) {
+    console.log(`[GitHub] Issue #${num} description was evaluated as thorough. Preserving original issue body and title.`);
+  } else {
+    const bodyParts = [ENHANCED_MARKER];
+    if (addBadge) {
+      bodyParts.push(
+        "> [!NOTE]",
+        "> **Issue Formatted with Gemini Flash Lite**",
+        "> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.",
+        ""
+      );
+    }
+    bodyParts.push(enhancedBody);
+    if (preserveOriginal) {
+      bodyParts.push(
+        "",
+        "---",
+        "<details>",
+        "<summary>\u{1F50D} <b>Original Submission</b> (Click to expand)</summary>",
+        "",
+        originalBody ? originalBody : "*(Original body was empty)*",
+        "",
+        "</details>"
+      );
+    }
+    const updatedIssueBody = bodyParts.join("\n");
+    const updatePayload = {
+      owner,
+      repo,
+      issue_number: num,
+      body: updatedIssueBody
+    };
+    const hasTitleUpdate = Boolean(enhancedTitle && enhancedTitle !== originalTitle);
+    if (hasTitleUpdate) {
+      updatePayload.title = enhancedTitle;
+    }
+    console.log(`[GitHub] Updating issue #${num} in ${owner}/${repo}...`);
+    await octokit.rest.issues.update(updatePayload);
+    console.log(`[GitHub] Successfully updated issue #${num} description.`);
   }
-  bodyParts.push(enhancedBody);
-  if (preserveOriginal) {
-    bodyParts.push(
-      "",
-      "---",
-      "<details>",
-      "<summary>\u{1F50D} <b>Original Submission</b> (Click to expand)</summary>",
-      "",
-      originalBody ? originalBody : "*(Original body was empty)*",
-      "",
-      "</details>"
-    );
-  }
-  const updatedIssueBody = bodyParts.join("\n");
-  const updatePayload = {
-    owner,
-    repo,
-    issue_number: num,
-    body: updatedIssueBody
-  };
-  const hasTitleUpdate = Boolean(enhancedTitle && enhancedTitle !== originalTitle);
-  if (hasTitleUpdate) {
-    updatePayload.title = enhancedTitle;
-  }
-  console.log(`[GitHub] Updating issue #${num} in ${owner}/${repo}...`);
-  await octokit.rest.issues.update(updatePayload);
-  console.log(`[GitHub] Successfully updated issue #${num} description.`);
   if (Array.isArray(addLabels) && addLabels.length > 0) {
     try {
       console.log(`[GitHub] Adding configured label(s) to issue #${num}: ${addLabels.join(", ")}`);
@@ -50255,7 +50302,7 @@ Options:
 Enhancing issue with Gemini (Model: ${config.geminiModel}, Temp: ${config.temperature})...
 `);
   try {
-    const { enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
+    const { isThorough, enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
       model: config.geminiModel,
       temperature: config.temperature,
       customInstruction: config.customInstruction,
@@ -50263,6 +50310,7 @@ Enhancing issue with Gemini (Model: ${config.geminiModel}, Temp: ${config.temper
     });
     console.log("==========================================");
     console.log(`  ENHANCED ISSUE (Model: ${modelUsed})`);
+    console.log(`  Thoroughness Check: ${isThorough ? "THOROUGH (body preserved in standard runs)" : "NEEDS_ENHANCEMENT"}`);
     console.log("==========================================");
     if (enhancedTitle) {
       console.log(`
@@ -50306,6 +50354,9 @@ async function runGitHubAction() {
   let repository = process.env.REPOSITORY;
   let author = process.env.ISSUE_AUTHOR || "";
   let labels = [];
+  let isCommentTrigger = false;
+  let commentId = process.env.COMMENT_ID || null;
+  let forceEnhance = false;
   if (process.env.ISSUE_LABELS) {
     try {
       const parsedLabels = JSON.parse(process.env.ISSUE_LABELS);
@@ -50316,9 +50367,10 @@ async function runGitHubAction() {
       labels = parseList(process.env.ISSUE_LABELS);
     }
   }
+  let eventData = null;
   if (process.env.GITHUB_EVENT_PATH && fs4.existsSync(process.env.GITHUB_EVENT_PATH)) {
     try {
-      const eventData = JSON.parse(fs4.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
+      eventData = JSON.parse(fs4.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
       if (eventData.issue) {
         title = eventData.issue.title || title;
         body = eventData.issue.body || body;
@@ -50343,6 +50395,49 @@ async function runGitHubAction() {
   if (!repository) {
     throw new Error("REPOSITORY is missing from action context.");
   }
+  if (eventData && eventData.comment) {
+    isCommentTrigger = true;
+    commentId = eventData.comment.id;
+    if (eventData.issue && eventData.issue.pull_request) {
+      console.log("[GitHub Action] Comment is on a pull request, not an issue. Skipping.");
+      return;
+    }
+    const commentBody = eventData.comment.body || process.env.COMMENT_BODY || "";
+    const isEnhanceCommand = /^\s*\/enhance\b/im.test(commentBody);
+    if (!isEnhanceCommand) {
+      console.log("[GitHub Action] Comment does not contain /enhance command. Skipping.");
+      return;
+    }
+    const commentAuthor = eventData.comment.user?.login || process.env.COMMENT_AUTHOR || "";
+    const issueAuthor = eventData.issue?.user?.login || author || "";
+    const authorAssociation = (eventData.comment.author_association || process.env.COMMENT_AUTHOR_ASSOCIATION || "").toUpperCase();
+    const allowedRoles = ["OWNER", "MEMBER", "COLLABORATOR"];
+    const isAuthorized = commentAuthor && issueAuthor && commentAuthor.toLowerCase() === issueAuthor.toLowerCase() || allowedRoles.includes(authorAssociation);
+    if (!isAuthorized) {
+      console.log(
+        `[GitHub Action] User "${commentAuthor}" (association: ${authorAssociation}) is not authorized to execute /enhance. Allowed: issue author, repository owner, members, or collaborators. Skipping.`
+      );
+      return;
+    }
+    if (commentId && process.env.GITHUB_TOKEN) {
+      await addCommentReaction({
+        token: process.env.GITHUB_TOKEN,
+        repository,
+        commentId,
+        content: "eyes"
+      });
+    }
+    forceEnhance = true;
+    if (isAlreadyEnhanced(body)) {
+      console.log(`[GitHub Action] Issue #${issueNumber} was previously enhanced. Extracting base content for re-enhancement.`);
+      body = extractRawIssueContent(body);
+    }
+  } else {
+    if (isAlreadyEnhanced(body)) {
+      console.log(`[GitHub Action] Issue #${issueNumber} is already enhanced. Skipping to prevent loop.`);
+      return;
+    }
+  }
   if (config.ignoreAuthors && config.ignoreAuthors.length > 0 && author) {
     const isIgnoredAuthor = config.ignoreAuthors.some(
       (ignored) => ignored.trim().toLowerCase() === author.trim().toLowerCase()
@@ -50360,17 +50455,19 @@ async function runGitHubAction() {
       return;
     }
   }
-  if (isAlreadyEnhanced(body)) {
-    console.log(`[GitHub Action] Issue #${issueNumber} is already enhanced. Skipping to prevent loop.`);
-    return;
-  }
-  console.log(`[GitHub Action] Processing issue #${issueNumber}: "${title}"`);
-  const { enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
+  console.log(`[GitHub Action] Processing issue #${issueNumber}: "${title}" (forceEnhance: ${forceEnhance})`);
+  const { isThorough, enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
     model: config.geminiModel,
     temperature: config.temperature,
     customInstruction: config.customInstruction,
     enhanceTitle: config.enhanceTitle
   });
+  const skipBodyUpdate = Boolean(isThorough && !forceEnhance);
+  if (skipBodyUpdate) {
+    console.log(
+      `[GitHub Action] Issue #${issueNumber} was evaluated as thorough on its own. Skipping body and title formatting, posting fix instructions comment if applicable.`
+    );
+  }
   await updateGitHubIssue({
     token: process.env.GITHUB_TOKEN,
     repository,
@@ -50385,10 +50482,19 @@ async function runGitHubAction() {
       postComment: config.postComment,
       preserveOriginal: config.preserveOriginal,
       addBadge: config.addBadge,
-      addLabels: config.addLabels
+      addLabels: config.addLabels,
+      skipBodyUpdate
     }
   });
-  console.log(`[GitHub Action] Completed enhancement for issue #${issueNumber}.`);
+  if (isCommentTrigger && commentId && process.env.GITHUB_TOKEN) {
+    await addCommentReaction({
+      token: process.env.GITHUB_TOKEN,
+      repository,
+      commentId,
+      content: "rocket"
+    });
+  }
+  console.log(`[GitHub Action] Completed processing for issue #${issueNumber}.`);
 }
 async function main() {
   const isCi = process.env.GITHUB_ACTIONS === "true" || !!process.env.GITHUB_TOKEN;

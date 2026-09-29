@@ -1,8 +1,10 @@
-name: Enhance New Issue
+name: Enhance GitHub Issue
 
 on:
   issues:
     types: [opened]
+  issue_comment:
+    types: [created]
 
 permissions:
   issues: write

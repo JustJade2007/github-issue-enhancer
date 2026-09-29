@@ -1,7 +1,7 @@
 {
   "name": "github-issue-enhancer",
-  "version": "0.3.0",
-  "description": "Rewords and formats new GitHub issues using Gemini Flash Lite without adding new content.",
+  "version": "0.4.0",
+  "description": "Rewords and formats GitHub issues using Gemini Flash Lite, detects issue thoroughness, and supports /enhance comment triggers.",
   "type": "module",
   "main": "src/index.js",
   "bin": {

@@ -5,8 +5,11 @@ An automated GitHub workflow and CLI utility powered by Google Gemini Flash Lite
 ## Features
 
 - **Strict Content Fidelity:** Reorganizes messy or shorthand descriptions into clean GitHub Flavored Markdown (Summary, Details, Context, Logs) while strictly preserving original technical boundaries and without inventing steps or solutions.
+- **Issue Thoroughness Detection:** Automatically evaluates new issues upon creation. If an issue is already thorough and well-explained (more than 2 well-written descriptive paragraphs or equivalent clear structure), the action preserves the author's original title and body, only posting contributor fix instructions as a comment if applicable.
+- **On-Demand `/enhance` Comment Command:** Work on existing or edited issues at any time! Commenting `/enhance` on any issue triggers enhancement, automatically acknowledges with emoji reactions (👀 while running, 🚀 when done), and safely re-formats previously enhanced issues.
+- **Authorized Permissions:** `/enhance` is restricted to authorized contributors: the original issue author, repository collaborators, and owners/maintainers.
 - **Centralized Workflow Settings:** Fully customizable workflow settings section to easily toggle or populate optional features (comments, badges, original text dropdown, title enhancement, labels, bot ignore lists, and temperature).
-- **Automated Workflow:** Triggers immediately whenever an issue is opened (`issues: [opened]`).
+- **Automated Workflow:** Triggers immediately whenever an issue is opened (`issues: [opened]`) or when `/enhance` is commented (`issue_comment: [created]`).
 - **Two-Fold Enhancement:**
   1. Updates the issue body with structured markdown while preserving the raw text in an expandable `<details>` section for transparency.
   2. Posts a comment with brief, practical instructions for contributors wanting to fix the issue (only posted if applicable; otherwise no comment is left).
@@ -27,11 +30,13 @@ To use GitHub Issue Enhancer in any repository (Python, Go, Rust, Java, Web, or 
 In your target repository, create `.github/workflows/enhance-issue.yml`:
 
 ```yaml
-name: Enhance New Issue
+name: Enhance GitHub Issue
 
 on:
   issues:
     types: [opened]
+  issue_comment:
+    types: [created]
 
 permissions:
   issues: write

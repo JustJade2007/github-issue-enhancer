@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-09-29
+
+### Added
+- **Issue Thoroughness Detection:** Automated evaluation determines if a newly opened issue is already thorough and well-explained (more than 2 well-written descriptive paragraphs or equivalent clear structure). When thorough, the action leaves the author's title and body intact and only posts contributor fix instructions (if enabled).
+- **On-Demand `/enhance` Comment Command:** Added support for triggering enhancement on existing, previously created, or edited issues via `/enhance` comment.
+- **Permission Protection:** Restricted `/enhance` command execution to authorized roles (issue author, repository collaborators, and owners/maintainers).
+- **Emoji Command Reactions:** Acknowledges `/enhance` comments with interactive emoji reactions (adds `eyes` 👀 when execution starts, and `rocket` 🚀 when complete).
+- **Safe Re-Enhancement Extraction:** Safely extracts the original raw text from existing `<details>` blocks or stripped markdown when re-enhancing already-enhanced issues, preventing recursive badges and marker duplication.
+- **Workflow Triggers:** Added `issue_comment: types: [created]` to `.github/workflows/enhance-issue.yml` and `.github/workflow-templates/enhance-issue.yml`.
+
 ## [0.3.0] - 2026-09-29
 
 ### Added

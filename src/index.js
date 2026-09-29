@@ -3,7 +3,12 @@ import fs from "fs";
 import readline from "readline";
 import { loadConfig, parseBoolean, parseList } from "./config.js";
 import { enhanceIssue } from "./gemini.js";
-import { isAlreadyEnhanced, updateGitHubIssue } from "./github.js";
+import {
+  isAlreadyEnhanced,
+  extractRawIssueContent,
+  addCommentReaction,
+  updateGitHubIssue
+} from "./github.js";
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -101,7 +106,7 @@ Options:
 
   console.log(`\nEnhancing issue with Gemini (Model: ${config.geminiModel}, Temp: ${config.temperature})...\n`);
   try {
-    const { enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
+    const { isThorough, enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
       model: config.geminiModel,
       temperature: config.temperature,
       customInstruction: config.customInstruction,
@@ -110,6 +115,7 @@ Options:
 
     console.log("==========================================");
     console.log(`  ENHANCED ISSUE (Model: ${modelUsed})`);
+    console.log(`  Thoroughness Check: ${isThorough ? "THOROUGH (body preserved in standard runs)" : "NEEDS_ENHANCEMENT"}`);
     console.log("==========================================");
     if (enhancedTitle) {
       console.log(`\nEnhanced Title: ${enhancedTitle}\n`);
@@ -159,6 +165,9 @@ async function runGitHubAction() {
   let repository = process.env.REPOSITORY;
   let author = process.env.ISSUE_AUTHOR || "";
   let labels = [];
+  let isCommentTrigger = false;
+  let commentId = process.env.COMMENT_ID || null;
+  let forceEnhance = false;
 
   // Parse ISSUE_LABELS from environment if present
   if (process.env.ISSUE_LABELS) {
@@ -173,9 +182,10 @@ async function runGitHubAction() {
   }
 
   // If GITHUB_EVENT_PATH is available, read directly from the GitHub event payload
+  let eventData = null;
   if (process.env.GITHUB_EVENT_PATH && fs.existsSync(process.env.GITHUB_EVENT_PATH)) {
     try {
-      const eventData = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
+      eventData = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
       if (eventData.issue) {
         title = eventData.issue.title || title;
         body = eventData.issue.body || body;
@@ -202,6 +212,69 @@ async function runGitHubAction() {
     throw new Error("REPOSITORY is missing from action context.");
   }
 
+  // Check if triggered by an issue comment
+  if (eventData && eventData.comment) {
+    isCommentTrigger = true;
+    commentId = eventData.comment.id;
+
+    // Disregard if comment is on a pull request
+    if (eventData.issue && eventData.issue.pull_request) {
+      console.log("[GitHub Action] Comment is on a pull request, not an issue. Skipping.");
+      return;
+    }
+
+    const commentBody = eventData.comment.body || process.env.COMMENT_BODY || "";
+    const isEnhanceCommand = /^\s*\/enhance\b/im.test(commentBody);
+    if (!isEnhanceCommand) {
+      console.log("[GitHub Action] Comment does not contain /enhance command. Skipping.");
+      return;
+    }
+
+    // Permission verification: issue author, repository owner, members, or collaborators
+    const commentAuthor = eventData.comment.user?.login || process.env.COMMENT_AUTHOR || "";
+    const issueAuthor = eventData.issue?.user?.login || author || "";
+    const authorAssociation = (
+      eventData.comment.author_association ||
+      process.env.COMMENT_AUTHOR_ASSOCIATION ||
+      ""
+    ).toUpperCase();
+    const allowedRoles = ["OWNER", "MEMBER", "COLLABORATOR"];
+
+    const isAuthorized =
+      (commentAuthor && issueAuthor && commentAuthor.toLowerCase() === issueAuthor.toLowerCase()) ||
+      allowedRoles.includes(authorAssociation);
+
+    if (!isAuthorized) {
+      console.log(
+        `[GitHub Action] User "${commentAuthor}" (association: ${authorAssociation}) is not authorized to execute /enhance. Allowed: issue author, repository owner, members, or collaborators. Skipping.`
+      );
+      return;
+    }
+
+    // Acknowledge command with 'eyes' reaction
+    if (commentId && process.env.GITHUB_TOKEN) {
+      await addCommentReaction({
+        token: process.env.GITHUB_TOKEN,
+        repository,
+        commentId,
+        content: "eyes"
+      });
+    }
+
+    // For /enhance command, force enhancement and extract raw text if already formatted
+    forceEnhance = true;
+    if (isAlreadyEnhanced(body)) {
+      console.log(`[GitHub Action] Issue #${issueNumber} was previously enhanced. Extracting base content for re-enhancement.`);
+      body = extractRawIssueContent(body);
+    }
+  } else {
+    // Normal issue open trigger: check loop protection
+    if (isAlreadyEnhanced(body)) {
+      console.log(`[GitHub Action] Issue #${issueNumber} is already enhanced. Skipping to prevent loop.`);
+      return;
+    }
+  }
+
   // Check ignore-authors filter
   if (config.ignoreAuthors && config.ignoreAuthors.length > 0 && author) {
     const isIgnoredAuthor = config.ignoreAuthors.some(
@@ -223,19 +296,20 @@ async function runGitHubAction() {
     }
   }
 
-  // Check loop protection
-  if (isAlreadyEnhanced(body)) {
-    console.log(`[GitHub Action] Issue #${issueNumber} is already enhanced. Skipping to prevent loop.`);
-    return;
-  }
-
-  console.log(`[GitHub Action] Processing issue #${issueNumber}: "${title}"`);
-  const { enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
+  console.log(`[GitHub Action] Processing issue #${issueNumber}: "${title}" (forceEnhance: ${forceEnhance})`);
+  const { isThorough, enhancedTitle, enhancedBody, fixInstructions, modelUsed } = await enhanceIssue(title, body, {
     model: config.geminiModel,
     temperature: config.temperature,
     customInstruction: config.customInstruction,
     enhanceTitle: config.enhanceTitle
   });
+
+  const skipBodyUpdate = Boolean(isThorough && !forceEnhance);
+  if (skipBodyUpdate) {
+    console.log(
+      `[GitHub Action] Issue #${issueNumber} was evaluated as thorough on its own. Skipping body and title formatting, posting fix instructions comment if applicable.`
+    );
+  }
 
   await updateGitHubIssue({
     token: process.env.GITHUB_TOKEN,
@@ -251,11 +325,22 @@ async function runGitHubAction() {
       postComment: config.postComment,
       preserveOriginal: config.preserveOriginal,
       addBadge: config.addBadge,
-      addLabels: config.addLabels
+      addLabels: config.addLabels,
+      skipBodyUpdate
     }
   });
 
-  console.log(`[GitHub Action] Completed enhancement for issue #${issueNumber}.`);
+  // Acknowledge completion on /enhance comment with 'rocket' reaction
+  if (isCommentTrigger && commentId && process.env.GITHUB_TOKEN) {
+    await addCommentReaction({
+      token: process.env.GITHUB_TOKEN,
+      repository,
+      commentId,
+      content: "rocket"
+    });
+  }
+
+  console.log(`[GitHub Action] Completed processing for issue #${issueNumber}.`);
 }
 
 async function main() {
