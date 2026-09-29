@@ -237,41 +237,93 @@ export async function createAndLinkBranch({
       .slice(0, 30);
 
     const branchName = `${branchPrefix}${issueNumber}${slug ? `-${slug}` : ""}`;
-    console.log(`[GitHub] Creating development branch "${branchName}" from "${defaultBranch}" (${latestCommitSha.slice(0, 7)})...`);
+    console.log(`[GitHub] Preparing development branch "${branchName}" from "${defaultBranch}" (${latestCommitSha.slice(0, 7)})...`);
 
-    // 3. Create ref in git
-    await octokit.rest.git.createRef({
-      owner,
-      repo,
-      ref: `refs/heads/${branchName}`,
-      sha: latestCommitSha
-    });
-    console.log(`[GitHub] Successfully created branch "${branchName}".`);
+    // Strategy 1: Use GitHub CLI 'gh issue develop' (native GitHub command to create & link branch)
+    try {
+      const { execFileSync } = await import("child_process");
+      console.log(`[GitHub] Attempting to create and link branch via GitHub CLI ('gh issue develop')...`);
+      execFileSync(
+        "gh",
+        [
+          "issue",
+          "develop",
+          String(issueNumber),
+          "--repo",
+          repository,
+          "--name",
+          branchName,
+          "--base",
+          defaultBranch
+        ],
+        {
+          env: {
+            ...process.env,
+            GH_TOKEN: token,
+            GITHUB_TOKEN: token
+          },
+          stdio: "pipe",
+          encoding: "utf8"
+        }
+      );
+      console.log(`[GitHub] Successfully created and linked branch "${branchName}" to issue #${issueNumber} via GitHub CLI.`);
+      return branchName;
+    } catch (cliErr) {
+      console.log(`[GitHub] Note: GitHub CLI linking returned: ${cliErr.message?.split("\n")[0] || "unavailable"}. Attempting GraphQL mutation.`);
+    }
 
-    // 4. Link branch to issue via GraphQL createLinkedBranch if issueNodeId is available
+    // Strategy 2: Use GraphQL createLinkedBranch mutation (creates branch and associates it with issue)
     if (issueNodeId) {
       try {
         const linkMutation = `
-          mutation linkBranch($issueId: ID!, $oid: GitObjectID!, $name: String!) {
-            createLinkedBranch(input: { issueId: $issueId, oid: $oid, name: $name }) {
+          mutation createLinkedBranch($input: CreateLinkedBranchInput!) {
+            createLinkedBranch(input: $input) {
               linkedBranch {
                 id
+                ref {
+                  name
+                }
               }
             }
           }
         `;
-        await octokit.graphql(linkMutation, {
-          issueId: issueNodeId,
-          oid: latestCommitSha,
-          name: branchName
+
+        const res = await octokit.graphql(linkMutation, {
+          input: {
+            issueId: issueNodeId,
+            oid: latestCommitSha,
+            name: branchName,
+            repositoryId: repoData.node_id
+          }
         });
-        console.log(`[GitHub] Successfully linked branch "${branchName}" to issue #${issueNumber}.`);
+
+        if (res?.createLinkedBranch?.linkedBranch?.id) {
+          console.log(`[GitHub] Successfully created and linked branch "${branchName}" to issue #${issueNumber} via GraphQL.`);
+          return branchName;
+        }
       } catch (linkErr) {
-        console.log(`[GitHub] Note: Linked branch association via GraphQL not available (${linkErr.message}). Branch was created in Git.`);
+        console.log(`[GitHub] Note: GraphQL createLinkedBranch returned: ${linkErr.message}. Falling back to Git ref creation.`);
       }
     }
 
-    return branchName;
+    // Strategy 3: Direct Git ref creation as fallback
+    try {
+      console.log(`[GitHub] Creating branch "${branchName}" in Git directly...`);
+      await octokit.rest.git.createRef({
+        owner,
+        repo,
+        ref: `refs/heads/${branchName}`,
+        sha: latestCommitSha
+      });
+      console.log(`[GitHub] Successfully created branch "${branchName}" in Git.`);
+      return branchName;
+    } catch (refErr) {
+      if (refErr.message && refErr.message.includes("Reference already exists")) {
+        console.log(`[GitHub] Branch "${branchName}" already exists in Git.`);
+        return branchName;
+      }
+      throw refErr;
+    }
   } catch (err) {
     console.warn(`[GitHub] Warning: Failed to create development branch:`, err.message);
     return null;
