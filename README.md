@@ -63,7 +63,7 @@ jobs:
 
           # --- Required Authentication ---
           gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_PAT || secrets.PAT_TOKEN || github.token }}
 
           # --- Model & Generation Settings ---
           # Specify Gemini model (default: gemini-3.1-flash-lite)
@@ -104,17 +104,19 @@ jobs:
           branch-prefix: 'issue-'
 
           # --- GitHub Projects v2 Management ---
-          # Project URL (e.g. 'https://github.com/orgs/my-org/projects/1')
+          # Project URL (e.g. 'https://github.com/orgs/my-org/projects/1' or 'https://github.com/users/my-user/projects/1')
           project-url: ''
-          # Optional token with project:write scope (defaults to github-token)
-          project-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          # Optional token for projects (use PROJECT_TOKEN or GH_PAT secret; defaults to github.token)
+          project-token: ${{ secrets.PROJECT_TOKEN || secrets.GH_PAT || secrets.PAT_TOKEN || github.token }}
 ```
 
-### Step 2: Add Secret to the Target Repository
+### Step 2: Add Secrets to the Target Repository
 1. Go to your repository's **Settings > Secrets and variables > Actions > New repository secret**.
-2. Name: `GEMINI_API_KEY`
-3. Value: Your Google Gemini API key.
-4. *(Optional)* Name: `PROJECT_TOKEN` if organizing issues across Organization/User Projects v2 that require `project: write` scope.
+2. **`GEMINI_API_KEY`**: Your Google Gemini API key.
+3. *(Optional)* **`PROJECT_TOKEN`** or **`GH_PAT`**: If organizing issues into User-level Projects v2 (`github.com/users/.../projects/...`) or if elevated permissions are required.
+
+> [!TIP]
+> **GitHub Secret Naming Restriction:** GitHub does **not** allow custom repository secret names starting with `GITHUB_` (such as `GITHUB_PAT` or `GITHUB_TOKEN`). When saving custom tokens, always use valid names such as `GH_PAT`, `PAT_TOKEN`, or `PROJECT_TOKEN`.
 
 That's all! The action executes self-contained via its pre-bundled distribution and requires no `package.json`, `package-lock.json`, or code checkout in the target repository.
 

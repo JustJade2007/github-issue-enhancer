@@ -22973,7 +22973,7 @@ function loadConfig(overrides = {}) {
     ignoreLabels: overrides.ignoreLabels !== void 0 ? parseList(overrides.ignoreLabels) : env2.IGNORE_LABELS !== void 0 ? parseList(env2.IGNORE_LABELS) : fileConfig.ignoreLabels !== void 0 ? parseList(fileConfig.ignoreLabels) : DEFAULT_CONFIG.ignoreLabels,
     // GitHub Projects v2
     projectUrl: overrides.projectUrl || env2.PROJECT_URL || fileConfig.project?.url || fileConfig.projectUrl || DEFAULT_CONFIG.projectUrl,
-    projectToken: overrides.projectToken || env2.PROJECT_TOKEN || fileConfig.project?.token || env2.GITHUB_TOKEN || DEFAULT_CONFIG.projectToken,
+    projectToken: overrides.projectToken || env2.PROJECT_TOKEN || env2.GH_PAT || env2.PAT_TOKEN || fileConfig.project?.token || env2.GITHUB_TOKEN || env2.GH_TOKEN || DEFAULT_CONFIG.projectToken,
     projectNumber: overrides.projectNumber !== void 0 ? overrides.projectNumber : env2.PROJECT_NUMBER !== void 0 ? env2.PROJECT_NUMBER : fileConfig.project?.number || DEFAULT_CONFIG.projectNumber,
     projectOwner: overrides.projectOwner || env2.PROJECT_OWNER || fileConfig.project?.owner || DEFAULT_CONFIG.projectOwner,
     priorityField: overrides.priorityField || env2.PROJECT_PRIORITY_FIELD || fileConfig.project?.priorityField || DEFAULT_CONFIG.priorityField,
@@ -51034,6 +51034,7 @@ Options:
 async function runGitHubAction() {
   console.log("[GitHub Action] Starting GitHub Issue Enhancer workflow...");
   const config = loadConfig();
+  const githubToken = process.env.GH_PAT || process.env.PAT_TOKEN || process.env.PROJECT_TOKEN || process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
   let title = process.env.ISSUE_TITLE || "";
   let body = process.env.ISSUE_BODY || "";
   let issueNumber = process.env.ISSUE_NUMBER;
@@ -51105,9 +51106,9 @@ async function runGitHubAction() {
       );
       return;
     }
-    if (commentId && process.env.GITHUB_TOKEN) {
+    if (commentId && githubToken) {
       await addCommentReaction({
-        token: process.env.GITHUB_TOKEN,
+        token: githubToken,
         repository,
         commentId,
         content: "eyes"
@@ -51143,18 +51144,18 @@ async function runGitHubAction() {
   }
   console.log(`[GitHub Action] Fetching repository labels and context for ${repository}...`);
   const availableLabels = await fetchRepositoryLabels({
-    token: process.env.GITHUB_TOKEN,
+    token: githubToken,
     repository
   });
   let candidateMilestones = [];
   if (config.milestone) {
     candidateMilestones = await fetchRepositoryMilestones({
-      token: process.env.GITHUB_TOKEN,
+      token: githubToken,
       repository
     });
   }
   const issueDetails = await getIssueDetails({
-    token: process.env.GITHUB_TOKEN,
+    token: githubToken,
     repository,
     issueNumber
   });
@@ -51193,7 +51194,7 @@ async function runGitHubAction() {
   });
   if (resolvedAssignees.length > 0) {
     await assignUsersToIssue({
-      token: process.env.GITHUB_TOKEN,
+      token: githubToken,
       repository,
       issueNumber,
       assignees: resolvedAssignees
@@ -51206,7 +51207,7 @@ async function runGitHubAction() {
   });
   if (resolvedMilestoneNumber) {
     await setIssueMilestone({
-      token: process.env.GITHUB_TOKEN,
+      token: githubToken,
       repository,
       issueNumber,
       milestoneNumber: resolvedMilestoneNumber
@@ -51215,7 +51216,7 @@ async function runGitHubAction() {
   let createdBranchName = null;
   if (config.createBranch) {
     createdBranchName = await createAndLinkBranch({
-      token: process.env.GITHUB_TOKEN,
+      token: githubToken,
       repository,
       issueNumber,
       issueTitle: enhancedTitle || title,
@@ -51224,7 +51225,7 @@ async function runGitHubAction() {
     });
   }
   await updateGitHubIssue({
-    token: process.env.GITHUB_TOKEN,
+    token: githubToken,
     repository,
     issueNumber,
     originalTitle: title,
@@ -51245,7 +51246,7 @@ async function runGitHubAction() {
   });
   if ((config.projectUrl || config.projectNumber) && issueNodeId) {
     await assignIssueToProject({
-      token: config.projectToken,
+      token: config.projectToken || githubToken,
       issueNodeId,
       projectUrl: config.projectUrl,
       projectNumber: config.projectNumber,
@@ -51256,9 +51257,9 @@ async function runGitHubAction() {
       sizeFieldName: config.sizeField
     });
   }
-  if (isCommentTrigger && commentId && process.env.GITHUB_TOKEN) {
+  if (isCommentTrigger && commentId && githubToken) {
     await addCommentReaction({
-      token: process.env.GITHUB_TOKEN,
+      token: githubToken,
       repository,
       commentId,
       content: "rocket"

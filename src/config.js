@@ -169,8 +169,11 @@ export function loadConfig(overrides = {}) {
     projectToken:
       overrides.projectToken ||
       env.PROJECT_TOKEN ||
+      env.GH_PAT ||
+      env.PAT_TOKEN ||
       fileConfig.project?.token ||
       env.GITHUB_TOKEN ||
+      env.GH_TOKEN ||
       DEFAULT_CONFIG.projectToken,
     projectNumber:
       overrides.projectNumber !== undefined

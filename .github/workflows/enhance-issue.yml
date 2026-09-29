@@ -24,8 +24,10 @@ jobs:
           # =========================================================================
 
           # --- Required Authentication ---
+          # Google Gemini API key
           gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Default GitHub workflow token or custom PAT (e.g. GH_PAT or PAT_TOKEN)
+          github-token: ${{ secrets.GH_PAT || secrets.PAT_TOKEN || github.token }}
 
           # --- Model & Generation Settings ---
           # Specify Gemini model (default: gemini-3.1-flash-lite)
@@ -66,7 +68,7 @@ jobs:
           branch-prefix: 'issue-'
 
           # --- GitHub Projects v2 Management ---
-          # Project URL (e.g. 'https://github.com/orgs/my-org/projects/1')
+          # Project URL (e.g. 'https://github.com/orgs/my-org/projects/1' or 'https://github.com/users/my-user/projects/1')
           project-url: ''
-          # Optional token with project:write scope (defaults to github-token)
-          project-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          # Optional token for projects (use PROJECT_TOKEN or GH_PAT secret; defaults to github.token)
+          project-token: ${{ secrets.PROJECT_TOKEN || secrets.GH_PAT || secrets.PAT_TOKEN || github.token }}

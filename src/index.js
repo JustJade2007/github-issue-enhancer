@@ -283,6 +283,12 @@ async function runGitHubAction() {
   console.log("[GitHub Action] Starting GitHub Issue Enhancer workflow...");
 
   const config = loadConfig();
+  const githubToken =
+    process.env.GH_PAT ||
+    process.env.PAT_TOKEN ||
+    process.env.PROJECT_TOKEN ||
+    process.env.GITHUB_TOKEN ||
+    process.env.GH_TOKEN;
 
   let title = process.env.ISSUE_TITLE || "";
   let body = process.env.ISSUE_BODY || "";
@@ -374,9 +380,9 @@ async function runGitHubAction() {
       return;
     }
 
-    if (commentId && process.env.GITHUB_TOKEN) {
+    if (commentId && githubToken) {
       await addCommentReaction({
-        token: process.env.GITHUB_TOKEN,
+        token: githubToken,
         repository,
         commentId,
         content: "eyes"
@@ -417,20 +423,20 @@ async function runGitHubAction() {
   // Fetch repository context (labels, milestones, issue node_id)
   console.log(`[GitHub Action] Fetching repository labels and context for ${repository}...`);
   const availableLabels = await fetchRepositoryLabels({
-    token: process.env.GITHUB_TOKEN,
+    token: githubToken,
     repository
   });
 
   let candidateMilestones = [];
   if (config.milestone) {
     candidateMilestones = await fetchRepositoryMilestones({
-      token: process.env.GITHUB_TOKEN,
+      token: githubToken,
       repository
     });
   }
 
   const issueDetails = await getIssueDetails({
-    token: process.env.GITHUB_TOKEN,
+    token: githubToken,
     repository,
     issueNumber
   });
@@ -474,7 +480,7 @@ async function runGitHubAction() {
 
   if (resolvedAssignees.length > 0) {
     await assignUsersToIssue({
-      token: process.env.GITHUB_TOKEN,
+      token: githubToken,
       repository,
       issueNumber,
       assignees: resolvedAssignees
@@ -490,7 +496,7 @@ async function runGitHubAction() {
 
   if (resolvedMilestoneNumber) {
     await setIssueMilestone({
-      token: process.env.GITHUB_TOKEN,
+      token: githubToken,
       repository,
       issueNumber,
       milestoneNumber: resolvedMilestoneNumber
@@ -501,7 +507,7 @@ async function runGitHubAction() {
   let createdBranchName = null;
   if (config.createBranch) {
     createdBranchName = await createAndLinkBranch({
-      token: process.env.GITHUB_TOKEN,
+      token: githubToken,
       repository,
       issueNumber,
       issueTitle: enhancedTitle || title,
@@ -512,7 +518,7 @@ async function runGitHubAction() {
 
   // Update GitHub Issue body, title, labels, and contributor comment
   await updateGitHubIssue({
-    token: process.env.GITHUB_TOKEN,
+    token: githubToken,
     repository,
     issueNumber,
     originalTitle: title,
@@ -535,7 +541,7 @@ async function runGitHubAction() {
   // GitHub Project v2 Assignment & Attributes (if configured)
   if ((config.projectUrl || config.projectNumber) && issueNodeId) {
     await assignIssueToProject({
-      token: config.projectToken,
+      token: config.projectToken || githubToken,
       issueNodeId,
       projectUrl: config.projectUrl,
       projectNumber: config.projectNumber,
@@ -548,9 +554,9 @@ async function runGitHubAction() {
   }
 
   // Acknowledge completion on /enhance comment with 'rocket' reaction
-  if (isCommentTrigger && commentId && process.env.GITHUB_TOKEN) {
+  if (isCommentTrigger && commentId && githubToken) {
     await addCommentReaction({
-      token: process.env.GITHUB_TOKEN,
+      token: githubToken,
       repository,
       commentId,
       content: "rocket"
