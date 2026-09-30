@@ -80,6 +80,18 @@ inputs:
     description: 'Prefix for newly created development branches (default: "issue-")'
     required: false
     default: 'issue-'
+  link-related:
+    description: 'Whether to detect and cross-reference related issues (true/false)'
+    required: false
+    default: 'true'
+  link-dependencies:
+    description: 'Whether to detect and link blocking/blocked-by issues (true/false)'
+    required: false
+    default: 'true'
+  link-sub-issues:
+    description: 'Whether to detect and link parent/sub-issues (true/false)'
+    required: false
+    default: 'true'
 
 runs:
   using: 'composite'
@@ -122,4 +134,7 @@ runs:
         MILESTONE: ${{ inputs.milestone }}
         CREATE_BRANCH: ${{ inputs.create-branch }}
         BRANCH_PREFIX: ${{ inputs.branch-prefix }}
+        LINK_RELATED: ${{ inputs.link-related }}
+        LINK_DEPENDENCIES: ${{ inputs.link-dependencies }}
+        LINK_SUB_ISSUES: ${{ inputs.link-sub-issues }}
       run: node "${{ github.action_path }}/dist/index.mjs"

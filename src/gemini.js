@@ -11,6 +11,11 @@ Your task is fourfold:
    - Estimate the priority (P0: Blocker/Critical/Urgent, P1: High, P2: Medium/Normal, P3: Low/Minor).
    - Estimate the scope/size (XS: Tiny/Trivial, S: Small, M: Medium, L: Large, XL: Very Large/Epic).
    - If candidate milestones are provided, select the best matching milestone.
+   - If candidate open issues are provided, identify relationships between the current issue and existing issues:
+     * RELATED: Issues that touch the same area, component, or workflow.
+     * BLOCKED_BY: Existing open issues that must be solved before this issue can be completed.
+     * BLOCKING: Existing open issues that cannot be completed until this issue is solved.
+     * PARENT_ISSUE: An existing open epic/parent issue that this issue is a sub-issue of.
 
 STRICT CONSTRAINTS FOR THE ISSUE BODY:
 1. STRICTLY NO NEW CONTENT IN ISSUE BODY: Do NOT hallucinate, invent, or assume any new facts, symptoms, reproduction steps, technical solutions, error logs, environment details, or requirements that the author did not explicitly state or provide.
@@ -30,7 +35,8 @@ GUIDELINES FOR FIX INSTRUCTIONS:
 TRIAGE CLASSIFICATION GUIDELINES:
 - LABELS: Pick only labels that accurately describe the type, component, or status based on available labels.
 - PRIORITY: Assign P0 for crashes/data loss/security, P1 for major broken functionality, P2 for normal bugs/features, P3 for typos/minor enhancements.
-- SIZE: XS (1-line / simple fix), S (small self-contained fix), M (standard feature/bug fix), L (multi-component change), XL (large architectural refactor).`;
+- SIZE: XS (1-line / simple fix), S (small self-contained fix), M (standard feature/bug fix), L (multi-component change), XL (large architectural refactor).
+- RELATIONSHIPS: Only reference issue numbers from the provided Candidate Open Issues list if there is a clear, meaningful connection. If no issues apply, output 'NONE'.`;
 
 const DEFAULT_MODELS = [
   process.env.GEMINI_MODEL,
@@ -89,19 +95,27 @@ export function parseGeminiResponse(rawText, enhanceTitle = false) {
   let estimatedPriority = null;
   let estimatedSize = null;
   let recommendedMilestone = null;
+  let relatedIssues = [];
+  let blockedByIssues = [];
+  let blockingIssues = [];
+  let parentIssue = null;
 
-  const thoroughMatch = rawText.match(/===IS_THOROUGH===\s*([\s\S]*?)(?====ENHANCED_TITLE===|===ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
+  const thoroughMatch = rawText.match(/===IS_THOROUGH===\s*([\s\S]*?)(?====ENHANCED_TITLE===|===ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
   if (thoroughMatch && thoroughMatch[1].trim()) {
     isThorough = thoroughMatch[1].trim().toUpperCase().startsWith("YES");
   }
 
-  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
-  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
-  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)(?====RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
-  const labelsMatch = rawText.match(/===RECOMMENDED_LABELS===\s*([\s\S]*?)(?====ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
-  const priorityMatch = rawText.match(/===ESTIMATED_PRIORITY===\s*([\s\S]*?)(?====ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
-  const sizeMatch = rawText.match(/===ESTIMATED_SIZE===\s*([\s\S]*?)(?====RECOMMENDED_MILESTONE===|$)/i);
-  const milestoneMatch = rawText.match(/===RECOMMENDED_MILESTONE===\s*([\s\S]*?)$/i);
+  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)(?====RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const labelsMatch = rawText.match(/===RECOMMENDED_LABELS===\s*([\s\S]*?)(?====ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const priorityMatch = rawText.match(/===ESTIMATED_PRIORITY===\s*([\s\S]*?)(?====ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const sizeMatch = rawText.match(/===ESTIMATED_SIZE===\s*([\s\S]*?)(?====RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const milestoneMatch = rawText.match(/===RECOMMENDED_MILESTONE===\s*([\s\S]*?)(?====RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const relatedMatch = rawText.match(/===RELATED_ISSUES===\s*([\s\S]*?)(?====BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const blockedByMatch = rawText.match(/===BLOCKED_BY_ISSUES===\s*([\s\S]*?)(?====BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const blockingMatch = rawText.match(/===BLOCKING_ISSUES===\s*([\s\S]*?)(?====PARENT_ISSUE===|$)/i);
+  const parentMatch = rawText.match(/===PARENT_ISSUE===\s*([\s\S]*?)$/i);
 
   if (enhanceTitle && titleMatch && titleMatch[1].trim()) {
     enhancedTitle = titleMatch[1].trim();
@@ -118,6 +132,10 @@ export function parseGeminiResponse(rawText, enhanceTitle = false) {
     if (priorityMatch) cleaned = cleaned.replace(priorityMatch[0], "");
     if (sizeMatch) cleaned = cleaned.replace(sizeMatch[0], "");
     if (milestoneMatch) cleaned = cleaned.replace(milestoneMatch[0], "");
+    if (relatedMatch) cleaned = cleaned.replace(relatedMatch[0], "");
+    if (blockedByMatch) cleaned = cleaned.replace(blockedByMatch[0], "");
+    if (blockingMatch) cleaned = cleaned.replace(blockingMatch[0], "");
+    if (parentMatch) cleaned = cleaned.replace(parentMatch[0], "");
     enhancedBody = cleaned.trim();
   } else if (!bodyMatch && !titleMatch && !fixMatch) {
     const legacyMatch = rawText.match(/^TITLE:\s*(.+?)(?:\r?\n)+BODY:\s*([\s\S]+)$/i);
@@ -168,6 +186,33 @@ export function parseGeminiResponse(rawText, enhanceTitle = false) {
     }
   }
 
+  const parseIssueList = (match) => {
+    if (!match || !match[1].trim()) return [];
+    const text = match[1].trim();
+    if (text.toLowerCase() === "none" || text.toLowerCase() === "n/a") return [];
+    const nums = [];
+    const matches = text.matchAll(/(?:#)?(\d+)/g);
+    for (const m of matches) {
+      const n = parseInt(m[1], 10);
+      if (!isNaN(n) && !nums.includes(n)) nums.push(n);
+    }
+    return nums;
+  };
+
+  relatedIssues = parseIssueList(relatedMatch);
+  blockedByIssues = parseIssueList(blockedByMatch);
+  blockingIssues = parseIssueList(blockingMatch);
+
+  if (parentMatch && parentMatch[1].trim()) {
+    const pText = parentMatch[1].trim();
+    if (pText.toLowerCase() !== "none" && pText.toLowerCase() !== "n/a") {
+      const pNumMatch = pText.match(/(?:#)?(\d+)/);
+      if (pNumMatch) {
+        parentIssue = parseInt(pNumMatch[1], 10);
+      }
+    }
+  }
+
   return {
     isThorough,
     enhancedTitle,
@@ -176,7 +221,11 @@ export function parseGeminiResponse(rawText, enhanceTitle = false) {
     recommendedLabels,
     estimatedPriority,
     estimatedSize,
-    recommendedMilestone
+    recommendedMilestone,
+    relatedIssues,
+    blockedByIssues,
+    blockingIssues,
+    parentIssue
   };
 }
 
@@ -201,6 +250,10 @@ export function parseGeminiResponse(rawText, enhanceTitle = false) {
  *   estimatedPriority: string|null,
  *   estimatedSize: string|null,
  *   recommendedMilestone: string|null,
+ *   relatedIssues: number[],
+ *   blockedByIssues: number[],
+ *   blockingIssues: number[],
+ *   parentIssue: number|null,
  *   modelUsed: string
  * }>}
  */
@@ -220,6 +273,7 @@ export async function enhanceIssue(title, body, options = {}) {
   const enhanceTitle = Boolean(options.enhanceTitle);
   const availableLabels = Array.isArray(options.availableLabels) ? options.availableLabels : [];
   const candidateMilestones = Array.isArray(options.candidateMilestones) ? options.candidateMilestones : [];
+  const candidateIssues = Array.isArray(options.candidateIssues) ? options.candidateIssues : [];
 
   let systemInstruction = SYSTEM_INSTRUCTION;
   if (customInstruction.trim()) {
@@ -234,14 +288,19 @@ export async function enhanceIssue(title, body, options = {}) {
     ? `Candidate Open Milestones:\n${candidateMilestones.join(", ")}`
     : `(No open milestones available)`;
 
+  const issuesContext = candidateIssues.length > 0
+    ? `Candidate Open Issues in Repository:\n${candidateIssues.map((iss) => `#${iss.number}: ${iss.title}${iss.body ? ` - ${iss.body.slice(0, 140).replace(/\r?\n/g, " ")}...` : ""}`).join("\n")}`
+    : `(No other open issues in repository)`;
+
   const titleSection = enhanceTitle
     ? `===ENHANCED_TITLE===\n<rewritten clear, concise, and professional issue title>\n\n`
     : "";
 
-  const prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue description for clarity and structure, provide brief fix instructions if applicable, and determine triage metadata (labels, priority, size, milestone).
+  const prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue description for clarity and structure, provide brief fix instructions if applicable, and determine triage metadata (labels, priority, size, milestone, and issue relationships).
 
 ${labelsContext}
 ${milestonesContext}
+${issuesContext}
 
 Return your response strictly in the following format with the exact delimiter tags:
 
@@ -265,6 +324,18 @@ ${titleSection}===ENHANCED_BODY===
 
 ===RECOMMENDED_MILESTONE===
 <exact name of matching milestone from Candidate Open Milestones, or 'NONE'>
+
+===RELATED_ISSUES===
+<comma-separated list of issue numbers from Candidate Open Issues that are related, e.g. #12, #34, or 'NONE'>
+
+===BLOCKED_BY_ISSUES===
+<comma-separated list of issue numbers from Candidate Open Issues that block this issue, e.g. #12, or 'NONE'>
+
+===BLOCKING_ISSUES===
+<comma-separated list of issue numbers from Candidate Open Issues that are blocked by this issue, e.g. #34, or 'NONE'>
+
+===PARENT_ISSUE===
+<issue number of candidate parent/epic issue that this issue belongs to as a sub-issue, e.g. #56, or 'NONE'>
 
 Issue Title: ${title || "(No title provided)"}
 
@@ -303,6 +374,10 @@ ${body || "(No description provided)"}`;
           estimatedPriority: parsed.estimatedPriority,
           estimatedSize: parsed.estimatedSize,
           recommendedMilestone: parsed.recommendedMilestone,
+          relatedIssues: parsed.relatedIssues,
+          blockedByIssues: parsed.blockedByIssues,
+          blockingIssues: parsed.blockingIssues,
+          parentIssue: parsed.parentIssue,
           modelUsed: model
         };
       }

@@ -66,6 +66,12 @@ jobs:
           create-branch: 'false'
           # Branch prefix for development branch creation (default: 'issue-')
           branch-prefix: 'issue-'
+          # Detect and cross-reference related issues (default: true)
+          link-related: 'true'
+          # Detect and link blocking / blocked-by dependencies (default: true)
+          link-dependencies: 'true'
+          # Detect and link parent / sub-issues (default: true)
+          link-sub-issues: 'true'
 
           # --- GitHub Projects v2 Management ---
           # Project URL (e.g. 'https://github.com/orgs/my-org/projects/1' or 'https://github.com/users/my-user/projects/1')

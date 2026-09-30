@@ -23,7 +23,10 @@ export const DEFAULT_CONFIG = {
   assignmentRules: [],
   milestone: "",
   createBranch: false,
-  branchPrefix: "issue-"
+  branchPrefix: "issue-",
+  linkRelated: true,
+  linkDependencies: true,
+  linkSubIssues: true
 };
 
 /**
@@ -239,7 +242,31 @@ export function loadConfig(overrides = {}) {
       overrides.branchPrefix ||
       env.BRANCH_PREFIX ||
       fileConfig.triage?.branchPrefix ||
-      DEFAULT_CONFIG.branchPrefix
+      DEFAULT_CONFIG.branchPrefix,
+    linkRelated:
+      overrides.linkRelated !== undefined
+        ? parseBoolean(overrides.linkRelated, DEFAULT_CONFIG.linkRelated)
+        : env.LINK_RELATED !== undefined
+        ? parseBoolean(env.LINK_RELATED, DEFAULT_CONFIG.linkRelated)
+        : fileConfig.triage?.linkRelated !== undefined
+        ? parseBoolean(fileConfig.triage.linkRelated, DEFAULT_CONFIG.linkRelated)
+        : DEFAULT_CONFIG.linkRelated,
+    linkDependencies:
+      overrides.linkDependencies !== undefined
+        ? parseBoolean(overrides.linkDependencies, DEFAULT_CONFIG.linkDependencies)
+        : env.LINK_DEPENDENCIES !== undefined
+        ? parseBoolean(env.LINK_DEPENDENCIES, DEFAULT_CONFIG.linkDependencies)
+        : fileConfig.triage?.linkDependencies !== undefined
+        ? parseBoolean(fileConfig.triage.linkDependencies, DEFAULT_CONFIG.linkDependencies)
+        : DEFAULT_CONFIG.linkDependencies,
+    linkSubIssues:
+      overrides.linkSubIssues !== undefined
+        ? parseBoolean(overrides.linkSubIssues, DEFAULT_CONFIG.linkSubIssues)
+        : env.LINK_SUB_ISSUES !== undefined
+        ? parseBoolean(env.LINK_SUB_ISSUES, DEFAULT_CONFIG.linkSubIssues)
+        : fileConfig.triage?.linkSubIssues !== undefined
+        ? parseBoolean(fileConfig.triage.linkSubIssues, DEFAULT_CONFIG.linkSubIssues)
+        : DEFAULT_CONFIG.linkSubIssues
   };
 
   // Ensure temperature stays in valid range

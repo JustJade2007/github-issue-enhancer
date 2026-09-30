@@ -118,6 +118,175 @@ export async function fetchRepositoryMilestones({ token, repository }) {
 }
 
 /**
+ * Fetches recent open issues in the repository for relationship detection (excluding current issue).
+ * Also inspects whether candidate issues already have branch or PR associations.
+ * @param {object} params
+ * @param {string} params.token
+ * @param {string} params.repository
+ * @param {number|string} params.excludeIssueNumber
+ * @param {number} [params.limit=30]
+ * @returns {Promise<Array<{ number: number, title: string, nodeId: string, body: string, linkedBranch?: string, prNumber?: number }>>}
+ */
+export async function fetchOpenIssues({ token, repository, excludeIssueNumber, limit = 30 }) {
+  if (!token || !repository) return [];
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit({ auth: token });
+    const { data } = await octokit.rest.issues.listForRepo({
+      owner,
+      repo,
+      state: "open",
+      sort: "updated",
+      direction: "desc",
+      per_page: Math.min(limit, 100)
+    });
+
+    const currentNum = parseInt(excludeIssueNumber, 10);
+    // Exclude pull requests (GitHub API listForRepo includes PRs unless filtered) and the current issue
+    const openIssues = data
+      .filter((item) => !item.pull_request && item.number !== currentNum)
+      .slice(0, limit);
+
+    return openIssues.map((item) => ({
+      number: item.number,
+      title: item.title,
+      nodeId: item.node_id,
+      body: item.body || "",
+      milestone: item.milestone ? { number: item.milestone.number, title: item.milestone.title } : null
+    }));
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not fetch open issues for relationship detection:`, err.message);
+    return [];
+  }
+}
+
+/**
+ * Discovers linked development branch or Pull Request for an issue.
+ * @param {object} params
+ * @param {string} params.token
+ * @param {string} params.repository
+ * @param {number|string} params.issueNumber
+ * @returns {Promise<{ branchName: string|null, prNumber: number|null, prUrl: string|null }>}
+ */
+export async function findIssueWorkAssociations({ token, repository, issueNumber }) {
+  if (!token || !repository || !issueNumber) return { branchName: null, prNumber: null, prUrl: null };
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit({ auth: token });
+
+    // 1. Check open Pull Requests that reference this issue (e.g. #issueNumber, fixes #..., closes #...)
+    const { data: openPRs } = await octokit.rest.pulls.list({
+      owner,
+      repo,
+      state: "open",
+      per_page: 50
+    });
+
+    const targetPattern = new RegExp(`(?:#|issues\\/)${issueNumber}\\b`, "i");
+    for (const pr of openPRs) {
+      if (
+        (pr.body && targetPattern.test(pr.body)) ||
+        (pr.title && targetPattern.test(pr.title)) ||
+        pr.head?.ref?.includes(String(issueNumber))
+      ) {
+        return {
+          branchName: pr.head?.ref || null,
+          prNumber: pr.number,
+          prUrl: pr.html_url
+        };
+      }
+    }
+
+    // 2. Check for branches named after the issue (e.g. issue-<num> or <prefix><num>)
+    try {
+      const { data: branches } = await octokit.rest.repos.listBranches({
+        owner,
+        repo,
+        per_page: 100
+      });
+      const issueBranch = branches.find((b) =>
+        new RegExp(`(^|[-_/])${issueNumber}([-_/]|$)`).test(b.name)
+      );
+      if (issueBranch) {
+        return { branchName: issueBranch.name, prNumber: null, prUrl: null };
+      }
+    } catch {
+      // ignore branch listing errors
+    }
+
+    return { branchName: null, prNumber: null, prUrl: null };
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not inspect work associations for issue #${issueNumber}:`, err.message);
+    return { branchName: null, prNumber: null, prUrl: null };
+  }
+}
+
+/**
+ * Links a child sub-issue to a parent issue using GraphQL addSubIssue mutation.
+ * @param {object} params
+ * @param {string} params.token
+ * @param {string} params.parentIssueId - GraphQL node_id
+ * @param {string} params.subIssueId - GraphQL node_id
+ */
+export async function linkSubIssue({ token, parentIssueId, subIssueId }) {
+  if (!token || !parentIssueId || !subIssueId) return;
+  try {
+    const octokit = new Octokit({ auth: token });
+    const mutation = `
+      mutation addSubIssue($issueId: ID!, $subIssueId: ID!) {
+        addSubIssue(input: { issueId: $issueId, subIssueId: $subIssueId }) {
+          subIssue {
+            id
+            number
+          }
+        }
+      }
+    `;
+    await octokit.graphql(mutation, {
+      issueId: parentIssueId,
+      subIssueId,
+      headers: {
+        "GraphQL-Features": "sub_issues"
+      }
+    });
+    console.log(`[GitHub] Successfully linked sub-issue via GraphQL.`);
+  } catch (err) {
+    console.log(`[GitHub] Note: GraphQL sub-issue linking: ${err.message}`);
+  }
+}
+
+/**
+ * Links a blocking issue dependency using GraphQL addBlockedBy mutation.
+ * @param {object} params
+ * @param {string} params.token
+ * @param {string} params.blockedIssueId - GraphQL node_id of issue that is blocked
+ * @param {string} params.blockingIssueId - GraphQL node_id of issue doing the blocking
+ */
+export async function linkBlockedBy({ token, blockedIssueId, blockingIssueId }) {
+  if (!token || !blockedIssueId || !blockingIssueId) return;
+  try {
+    const octokit = new Octokit({ auth: token });
+    const mutation = `
+      mutation addBlockedBy($issueId: ID!, $blockingIssueId: ID!) {
+        addBlockedBy(input: { issueId: $issueId, blockingIssueId: $blockingIssueId }) {
+          blockingIssue {
+            id
+            number
+          }
+        }
+      }
+    `;
+    await octokit.graphql(mutation, {
+      issueId: blockedIssueId,
+      blockingIssueId
+    });
+    console.log(`[GitHub] Successfully linked blocked-by dependency via GraphQL.`);
+  } catch (err) {
+    console.log(`[GitHub] Note: GraphQL issue dependency linking: ${err.message}`);
+  }
+}
+
+/**
  * Fetches detailed GitHub issue information, including node_id.
  * @param {object} params
  * @param {string} params.token
@@ -392,7 +561,8 @@ export async function updateGitHubIssue({
     estimatedSize = null,
     priorityField = "Priority",
     sizeField = "Size",
-    createdBranchName = null
+    createdBranchName = null,
+    relationshipDetails = null
   } = options;
 
   const octokit = new Octokit({ auth: token });
@@ -467,20 +637,60 @@ export async function updateGitHubIssue({
     }
   }
 
-  // 3. Post comment with contributor fix instructions if enabled and applicable
+  // 3. Post comment with contributor fix instructions and relationship links if enabled
   if (postComment) {
-    if (fixInstructions && fixInstructions.trim()) {
-      const commentLines = [
-        "> [!TIP]",
-        "> ### 💡 Instructions to Fix This Issue",
-        "> Here are brief instructions to help anyone interested in resolving this issue:",
-        "",
-        fixInstructions.trim()
-      ];
+    const hasFixInstructions = Boolean(fixInstructions && fixInstructions.trim());
+    const rel = relationshipDetails || {};
+    const hasRelationships = Boolean(
+      (rel.relatedIssues && rel.relatedIssues.length > 0) ||
+      (rel.blockedByIssues && rel.blockedByIssues.length > 0) ||
+      (rel.blockingIssues && rel.blockingIssues.length > 0) ||
+      rel.parentIssue ||
+      rel.reusedBranchInfo
+    );
 
-      if (createdBranchName) {
+    if (hasFixInstructions || hasRelationships || createdBranchName) {
+      const commentLines = [];
+
+      if (hasFixInstructions) {
         commentLines.push(
+          "> [!TIP]",
+          "> ### 💡 Instructions to Fix This Issue",
+          "> Here are brief instructions to help anyone interested in resolving this issue:",
           "",
+          fixInstructions.trim()
+        );
+      }
+
+      if (hasRelationships) {
+        if (commentLines.length > 0) commentLines.push("");
+        commentLines.push(
+          "> [!NOTE]",
+          "> ### 🔗 Issue Relationships & Work Context"
+        );
+        if (rel.parentIssue) {
+          commentLines.push(`> - **Sub-issue of**: #${rel.parentIssue}`);
+        }
+        if (rel.blockedByIssues && rel.blockedByIssues.length > 0) {
+          commentLines.push(`> - **Blocked by**: ${rel.blockedByIssues.map((n) => `#${n}`).join(", ")}`);
+        }
+        if (rel.blockingIssues && rel.blockingIssues.length > 0) {
+          commentLines.push(`> - **Blocks**: ${rel.blockingIssues.map((n) => `#${n}`).join(", ")}`);
+        }
+        if (rel.relatedIssues && rel.relatedIssues.length > 0) {
+          commentLines.push(`> - **Related issues**: ${rel.relatedIssues.map((n) => `#${n}`).join(", ")}`);
+        }
+        if (rel.reusedBranchInfo) {
+          const prRef = rel.reusedBranchInfo.prNumber ? ` (PR #${rel.reusedBranchInfo.prNumber})` : "";
+          commentLines.push(
+            `> - **Development Branch**: Shared with related issue #${rel.reusedBranchInfo.issueNumber} on \`${rel.reusedBranchInfo.branchName}\`${prRef}`
+          );
+        }
+      }
+
+      if (createdBranchName && (!rel.reusedBranchInfo || rel.reusedBranchInfo.branchName !== createdBranchName)) {
+        if (commentLines.length > 0) commentLines.push("");
+        commentLines.push(
           "> [!NOTE]",
           `> Development branch \`${createdBranchName}\` has been created for this issue.`
         );

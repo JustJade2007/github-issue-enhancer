@@ -22926,7 +22926,10 @@ var DEFAULT_CONFIG = {
   assignmentRules: [],
   milestone: "",
   createBranch: false,
-  branchPrefix: "issue-"
+  branchPrefix: "issue-",
+  linkRelated: true,
+  linkDependencies: true,
+  linkSubIssues: true
 };
 function parseBoolean(val, defaultValue = true) {
   if (val === void 0 || val === null || val === "") return defaultValue;
@@ -22986,7 +22989,10 @@ function loadConfig(overrides = {}) {
     milestone: overrides.milestone !== void 0 ? String(overrides.milestone).trim() : env2.MILESTONE !== void 0 ? String(env2.MILESTONE).trim() : fileConfig.triage?.milestone !== void 0 ? String(fileConfig.triage.milestone).trim() : DEFAULT_CONFIG.milestone,
     // Branch creation
     createBranch: overrides.createBranch !== void 0 ? parseBoolean(overrides.createBranch, DEFAULT_CONFIG.createBranch) : env2.CREATE_BRANCH !== void 0 ? parseBoolean(env2.CREATE_BRANCH, DEFAULT_CONFIG.createBranch) : fileConfig.triage?.createBranch !== void 0 ? parseBoolean(fileConfig.triage.createBranch, DEFAULT_CONFIG.createBranch) : DEFAULT_CONFIG.createBranch,
-    branchPrefix: overrides.branchPrefix || env2.BRANCH_PREFIX || fileConfig.triage?.branchPrefix || DEFAULT_CONFIG.branchPrefix
+    branchPrefix: overrides.branchPrefix || env2.BRANCH_PREFIX || fileConfig.triage?.branchPrefix || DEFAULT_CONFIG.branchPrefix,
+    linkRelated: overrides.linkRelated !== void 0 ? parseBoolean(overrides.linkRelated, DEFAULT_CONFIG.linkRelated) : env2.LINK_RELATED !== void 0 ? parseBoolean(env2.LINK_RELATED, DEFAULT_CONFIG.linkRelated) : fileConfig.triage?.linkRelated !== void 0 ? parseBoolean(fileConfig.triage.linkRelated, DEFAULT_CONFIG.linkRelated) : DEFAULT_CONFIG.linkRelated,
+    linkDependencies: overrides.linkDependencies !== void 0 ? parseBoolean(overrides.linkDependencies, DEFAULT_CONFIG.linkDependencies) : env2.LINK_DEPENDENCIES !== void 0 ? parseBoolean(env2.LINK_DEPENDENCIES, DEFAULT_CONFIG.linkDependencies) : fileConfig.triage?.linkDependencies !== void 0 ? parseBoolean(fileConfig.triage.linkDependencies, DEFAULT_CONFIG.linkDependencies) : DEFAULT_CONFIG.linkDependencies,
+    linkSubIssues: overrides.linkSubIssues !== void 0 ? parseBoolean(overrides.linkSubIssues, DEFAULT_CONFIG.linkSubIssues) : env2.LINK_SUB_ISSUES !== void 0 ? parseBoolean(env2.LINK_SUB_ISSUES, DEFAULT_CONFIG.linkSubIssues) : fileConfig.triage?.linkSubIssues !== void 0 ? parseBoolean(fileConfig.triage.linkSubIssues, DEFAULT_CONFIG.linkSubIssues) : DEFAULT_CONFIG.linkSubIssues
   };
   if (isNaN(config.temperature) || config.temperature < 0 || config.temperature > 1) {
     config.temperature = DEFAULT_CONFIG.temperature;
@@ -46392,6 +46398,11 @@ Your task is fourfold:
    - Estimate the priority (P0: Blocker/Critical/Urgent, P1: High, P2: Medium/Normal, P3: Low/Minor).
    - Estimate the scope/size (XS: Tiny/Trivial, S: Small, M: Medium, L: Large, XL: Very Large/Epic).
    - If candidate milestones are provided, select the best matching milestone.
+   - If candidate open issues are provided, identify relationships between the current issue and existing issues:
+     * RELATED: Issues that touch the same area, component, or workflow.
+     * BLOCKED_BY: Existing open issues that must be solved before this issue can be completed.
+     * BLOCKING: Existing open issues that cannot be completed until this issue is solved.
+     * PARENT_ISSUE: An existing open epic/parent issue that this issue is a sub-issue of.
 
 STRICT CONSTRAINTS FOR THE ISSUE BODY:
 1. STRICTLY NO NEW CONTENT IN ISSUE BODY: Do NOT hallucinate, invent, or assume any new facts, symptoms, reproduction steps, technical solutions, error logs, environment details, or requirements that the author did not explicitly state or provide.
@@ -46411,7 +46422,8 @@ GUIDELINES FOR FIX INSTRUCTIONS:
 TRIAGE CLASSIFICATION GUIDELINES:
 - LABELS: Pick only labels that accurately describe the type, component, or status based on available labels.
 - PRIORITY: Assign P0 for crashes/data loss/security, P1 for major broken functionality, P2 for normal bugs/features, P3 for typos/minor enhancements.
-- SIZE: XS (1-line / simple fix), S (small self-contained fix), M (standard feature/bug fix), L (multi-component change), XL (large architectural refactor).`;
+- SIZE: XS (1-line / simple fix), S (small self-contained fix), M (standard feature/bug fix), L (multi-component change), XL (large architectural refactor).
+- RELATIONSHIPS: Only reference issue numbers from the provided Candidate Open Issues list if there is a clear, meaningful connection. If no issues apply, output 'NONE'.`;
 var DEFAULT_MODELS = [
   process.env.GEMINI_MODEL,
   "gemini-3.1-flash-lite",
@@ -46436,17 +46448,25 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
   let estimatedPriority = null;
   let estimatedSize = null;
   let recommendedMilestone = null;
-  const thoroughMatch = rawText.match(/===IS_THOROUGH===\s*([\s\S]*?)(?====ENHANCED_TITLE===|===ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
+  let relatedIssues = [];
+  let blockedByIssues = [];
+  let blockingIssues = [];
+  let parentIssue = null;
+  const thoroughMatch = rawText.match(/===IS_THOROUGH===\s*([\s\S]*?)(?====ENHANCED_TITLE===|===ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
   if (thoroughMatch && thoroughMatch[1].trim()) {
     isThorough = thoroughMatch[1].trim().toUpperCase().startsWith("YES");
   }
-  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
-  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
-  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)(?====RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
-  const labelsMatch = rawText.match(/===RECOMMENDED_LABELS===\s*([\s\S]*?)(?====ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
-  const priorityMatch = rawText.match(/===ESTIMATED_PRIORITY===\s*([\s\S]*?)(?====ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|$)/i);
-  const sizeMatch = rawText.match(/===ESTIMATED_SIZE===\s*([\s\S]*?)(?====RECOMMENDED_MILESTONE===|$)/i);
-  const milestoneMatch = rawText.match(/===RECOMMENDED_MILESTONE===\s*([\s\S]*?)$/i);
+  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)(?====RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const labelsMatch = rawText.match(/===RECOMMENDED_LABELS===\s*([\s\S]*?)(?====ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const priorityMatch = rawText.match(/===ESTIMATED_PRIORITY===\s*([\s\S]*?)(?====ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const sizeMatch = rawText.match(/===ESTIMATED_SIZE===\s*([\s\S]*?)(?====RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const milestoneMatch = rawText.match(/===RECOMMENDED_MILESTONE===\s*([\s\S]*?)(?====RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const relatedMatch = rawText.match(/===RELATED_ISSUES===\s*([\s\S]*?)(?====BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const blockedByMatch = rawText.match(/===BLOCKED_BY_ISSUES===\s*([\s\S]*?)(?====BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const blockingMatch = rawText.match(/===BLOCKING_ISSUES===\s*([\s\S]*?)(?====PARENT_ISSUE===|$)/i);
+  const parentMatch = rawText.match(/===PARENT_ISSUE===\s*([\s\S]*?)$/i);
   if (enhanceTitle && titleMatch && titleMatch[1].trim()) {
     enhancedTitle = titleMatch[1].trim();
   }
@@ -46461,6 +46481,10 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
     if (priorityMatch) cleaned = cleaned.replace(priorityMatch[0], "");
     if (sizeMatch) cleaned = cleaned.replace(sizeMatch[0], "");
     if (milestoneMatch) cleaned = cleaned.replace(milestoneMatch[0], "");
+    if (relatedMatch) cleaned = cleaned.replace(relatedMatch[0], "");
+    if (blockedByMatch) cleaned = cleaned.replace(blockedByMatch[0], "");
+    if (blockingMatch) cleaned = cleaned.replace(blockingMatch[0], "");
+    if (parentMatch) cleaned = cleaned.replace(parentMatch[0], "");
     enhancedBody = cleaned.trim();
   } else if (!bodyMatch && !titleMatch && !fixMatch) {
     const legacyMatch = rawText.match(/^TITLE:\s*(.+?)(?:\r?\n)+BODY:\s*([\s\S]+)$/i);
@@ -46502,6 +46526,30 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
       recommendedMilestone = m2;
     }
   }
+  const parseIssueList = (match2) => {
+    if (!match2 || !match2[1].trim()) return [];
+    const text = match2[1].trim();
+    if (text.toLowerCase() === "none" || text.toLowerCase() === "n/a") return [];
+    const nums = [];
+    const matches = text.matchAll(/(?:#)?(\d+)/g);
+    for (const m2 of matches) {
+      const n = parseInt(m2[1], 10);
+      if (!isNaN(n) && !nums.includes(n)) nums.push(n);
+    }
+    return nums;
+  };
+  relatedIssues = parseIssueList(relatedMatch);
+  blockedByIssues = parseIssueList(blockedByMatch);
+  blockingIssues = parseIssueList(blockingMatch);
+  if (parentMatch && parentMatch[1].trim()) {
+    const pText = parentMatch[1].trim();
+    if (pText.toLowerCase() !== "none" && pText.toLowerCase() !== "n/a") {
+      const pNumMatch = pText.match(/(?:#)?(\d+)/);
+      if (pNumMatch) {
+        parentIssue = parseInt(pNumMatch[1], 10);
+      }
+    }
+  }
   return {
     isThorough,
     enhancedTitle,
@@ -46510,7 +46558,11 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
     recommendedLabels,
     estimatedPriority,
     estimatedSize,
-    recommendedMilestone
+    recommendedMilestone,
+    relatedIssues,
+    blockedByIssues,
+    blockingIssues,
+    parentIssue
   };
 }
 async function enhanceIssue(title, body, options = {}) {
@@ -46524,6 +46576,7 @@ async function enhanceIssue(title, body, options = {}) {
   const enhanceTitle = Boolean(options.enhanceTitle);
   const availableLabels = Array.isArray(options.availableLabels) ? options.availableLabels : [];
   const candidateMilestones = Array.isArray(options.candidateMilestones) ? options.candidateMilestones : [];
+  const candidateIssues = Array.isArray(options.candidateIssues) ? options.candidateIssues : [];
   let systemInstruction = SYSTEM_INSTRUCTION;
   if (customInstruction.trim()) {
     systemInstruction += `
@@ -46535,14 +46588,17 @@ ${customInstruction.trim()}`;
 ${availableLabels.join(", ")}` : `(No predefined labels available. If applicable, recommend standard labels like bug, documentation, enhancement, etc.)`;
   const milestonesContext = candidateMilestones.length > 0 ? `Candidate Open Milestones:
 ${candidateMilestones.join(", ")}` : `(No open milestones available)`;
+  const issuesContext = candidateIssues.length > 0 ? `Candidate Open Issues in Repository:
+${candidateIssues.map((iss) => `#${iss.number}: ${iss.title}${iss.body ? ` - ${iss.body.slice(0, 140).replace(/\r?\n/g, " ")}...` : ""}`).join("\n")}` : `(No other open issues in repository)`;
   const titleSection = enhanceTitle ? `===ENHANCED_TITLE===
 <rewritten clear, concise, and professional issue title>
 
 ` : "";
-  const prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue description for clarity and structure, provide brief fix instructions if applicable, and determine triage metadata (labels, priority, size, milestone).
+  const prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue description for clarity and structure, provide brief fix instructions if applicable, and determine triage metadata (labels, priority, size, milestone, and issue relationships).
 
 ${labelsContext}
 ${milestonesContext}
+${issuesContext}
 
 Return your response strictly in the following format with the exact delimiter tags:
 
@@ -46566,6 +46622,18 @@ ${titleSection}===ENHANCED_BODY===
 
 ===RECOMMENDED_MILESTONE===
 <exact name of matching milestone from Candidate Open Milestones, or 'NONE'>
+
+===RELATED_ISSUES===
+<comma-separated list of issue numbers from Candidate Open Issues that are related, e.g. #12, #34, or 'NONE'>
+
+===BLOCKED_BY_ISSUES===
+<comma-separated list of issue numbers from Candidate Open Issues that block this issue, e.g. #12, or 'NONE'>
+
+===BLOCKING_ISSUES===
+<comma-separated list of issue numbers from Candidate Open Issues that are blocked by this issue, e.g. #34, or 'NONE'>
+
+===PARENT_ISSUE===
+<issue number of candidate parent/epic issue that this issue belongs to as a sub-issue, e.g. #56, or 'NONE'>
 
 Issue Title: ${title || "(No title provided)"}
 
@@ -46599,6 +46667,10 @@ ${body || "(No description provided)"}`;
           estimatedPriority: parsed.estimatedPriority,
           estimatedSize: parsed.estimatedSize,
           recommendedMilestone: parsed.recommendedMilestone,
+          relatedIssues: parsed.relatedIssues,
+          blockedByIssues: parsed.blockedByIssues,
+          blockingIssues: parsed.blockingIssues,
+          parentIssue: parsed.parentIssue,
           modelUsed: model
         };
       }
@@ -50576,6 +50648,123 @@ async function fetchRepositoryMilestones({ token, repository }) {
     return [];
   }
 }
+async function fetchOpenIssues({ token, repository, excludeIssueNumber, limit = 30 }) {
+  if (!token || !repository) return [];
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    const { data } = await octokit.rest.issues.listForRepo({
+      owner,
+      repo,
+      state: "open",
+      sort: "updated",
+      direction: "desc",
+      per_page: Math.min(limit, 100)
+    });
+    const currentNum = parseInt(excludeIssueNumber, 10);
+    const openIssues = data.filter((item) => !item.pull_request && item.number !== currentNum).slice(0, limit);
+    return openIssues.map((item) => ({
+      number: item.number,
+      title: item.title,
+      nodeId: item.node_id,
+      body: item.body || "",
+      milestone: item.milestone ? { number: item.milestone.number, title: item.milestone.title } : null
+    }));
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not fetch open issues for relationship detection:`, err.message);
+    return [];
+  }
+}
+async function findIssueWorkAssociations({ token, repository, issueNumber }) {
+  if (!token || !repository || !issueNumber) return { branchName: null, prNumber: null, prUrl: null };
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    const { data: openPRs } = await octokit.rest.pulls.list({
+      owner,
+      repo,
+      state: "open",
+      per_page: 50
+    });
+    const targetPattern = new RegExp(`(?:#|issues\\/)${issueNumber}\\b`, "i");
+    for (const pr of openPRs) {
+      if (pr.body && targetPattern.test(pr.body) || pr.title && targetPattern.test(pr.title) || pr.head?.ref?.includes(String(issueNumber))) {
+        return {
+          branchName: pr.head?.ref || null,
+          prNumber: pr.number,
+          prUrl: pr.html_url
+        };
+      }
+    }
+    try {
+      const { data: branches } = await octokit.rest.repos.listBranches({
+        owner,
+        repo,
+        per_page: 100
+      });
+      const issueBranch = branches.find(
+        (b) => new RegExp(`(^|[-_/])${issueNumber}([-_/]|$)`).test(b.name)
+      );
+      if (issueBranch) {
+        return { branchName: issueBranch.name, prNumber: null, prUrl: null };
+      }
+    } catch {
+    }
+    return { branchName: null, prNumber: null, prUrl: null };
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not inspect work associations for issue #${issueNumber}:`, err.message);
+    return { branchName: null, prNumber: null, prUrl: null };
+  }
+}
+async function linkSubIssue({ token, parentIssueId, subIssueId }) {
+  if (!token || !parentIssueId || !subIssueId) return;
+  try {
+    const octokit = new Octokit2({ auth: token });
+    const mutation = `
+      mutation addSubIssue($issueId: ID!, $subIssueId: ID!) {
+        addSubIssue(input: { issueId: $issueId, subIssueId: $subIssueId }) {
+          subIssue {
+            id
+            number
+          }
+        }
+      }
+    `;
+    await octokit.graphql(mutation, {
+      issueId: parentIssueId,
+      subIssueId,
+      headers: {
+        "GraphQL-Features": "sub_issues"
+      }
+    });
+    console.log(`[GitHub] Successfully linked sub-issue via GraphQL.`);
+  } catch (err) {
+    console.log(`[GitHub] Note: GraphQL sub-issue linking: ${err.message}`);
+  }
+}
+async function linkBlockedBy({ token, blockedIssueId, blockingIssueId }) {
+  if (!token || !blockedIssueId || !blockingIssueId) return;
+  try {
+    const octokit = new Octokit2({ auth: token });
+    const mutation = `
+      mutation addBlockedBy($issueId: ID!, $blockingIssueId: ID!) {
+        addBlockedBy(input: { issueId: $issueId, blockingIssueId: $blockingIssueId }) {
+          blockingIssue {
+            id
+            number
+          }
+        }
+      }
+    `;
+    await octokit.graphql(mutation, {
+      issueId: blockedIssueId,
+      blockingIssueId
+    });
+    console.log(`[GitHub] Successfully linked blocked-by dependency via GraphQL.`);
+  } catch (err) {
+    console.log(`[GitHub] Note: GraphQL issue dependency linking: ${err.message}`);
+  }
+}
 async function getIssueDetails({ token, repository, issueNumber }) {
   if (!token || !repository || !issueNumber) return null;
   try {
@@ -50776,7 +50965,8 @@ async function updateGitHubIssue({
     estimatedSize = null,
     priorityField = "Priority",
     sizeField = "Size",
-    createdBranchName = null
+    createdBranchName = null,
+    relationshipDetails = null
   } = options;
   const octokit = new Octokit2({ auth: token });
   if (skipBodyUpdate) {
@@ -50837,17 +51027,50 @@ async function updateGitHubIssue({
     }
   }
   if (postComment) {
-    if (fixInstructions && fixInstructions.trim()) {
-      const commentLines = [
-        "> [!TIP]",
-        "> ### \u{1F4A1} Instructions to Fix This Issue",
-        "> Here are brief instructions to help anyone interested in resolving this issue:",
-        "",
-        fixInstructions.trim()
-      ];
-      if (createdBranchName) {
+    const hasFixInstructions = Boolean(fixInstructions && fixInstructions.trim());
+    const rel = relationshipDetails || {};
+    const hasRelationships = Boolean(
+      rel.relatedIssues && rel.relatedIssues.length > 0 || rel.blockedByIssues && rel.blockedByIssues.length > 0 || rel.blockingIssues && rel.blockingIssues.length > 0 || rel.parentIssue || rel.reusedBranchInfo
+    );
+    if (hasFixInstructions || hasRelationships || createdBranchName) {
+      const commentLines = [];
+      if (hasFixInstructions) {
         commentLines.push(
+          "> [!TIP]",
+          "> ### \u{1F4A1} Instructions to Fix This Issue",
+          "> Here are brief instructions to help anyone interested in resolving this issue:",
           "",
+          fixInstructions.trim()
+        );
+      }
+      if (hasRelationships) {
+        if (commentLines.length > 0) commentLines.push("");
+        commentLines.push(
+          "> [!NOTE]",
+          "> ### \u{1F517} Issue Relationships & Work Context"
+        );
+        if (rel.parentIssue) {
+          commentLines.push(`> - **Sub-issue of**: #${rel.parentIssue}`);
+        }
+        if (rel.blockedByIssues && rel.blockedByIssues.length > 0) {
+          commentLines.push(`> - **Blocked by**: ${rel.blockedByIssues.map((n) => `#${n}`).join(", ")}`);
+        }
+        if (rel.blockingIssues && rel.blockingIssues.length > 0) {
+          commentLines.push(`> - **Blocks**: ${rel.blockingIssues.map((n) => `#${n}`).join(", ")}`);
+        }
+        if (rel.relatedIssues && rel.relatedIssues.length > 0) {
+          commentLines.push(`> - **Related issues**: ${rel.relatedIssues.map((n) => `#${n}`).join(", ")}`);
+        }
+        if (rel.reusedBranchInfo) {
+          const prRef = rel.reusedBranchInfo.prNumber ? ` (PR #${rel.reusedBranchInfo.prNumber})` : "";
+          commentLines.push(
+            `> - **Development Branch**: Shared with related issue #${rel.reusedBranchInfo.issueNumber} on \`${rel.reusedBranchInfo.branchName}\`${prRef}`
+          );
+        }
+      }
+      if (createdBranchName && (!rel.reusedBranchInfo || rel.reusedBranchInfo.branchName !== createdBranchName)) {
+        if (commentLines.length > 0) commentLines.push("");
+        commentLines.push(
           "> [!NOTE]",
           `> Development branch \`${createdBranchName}\` has been created for this issue.`
         );
@@ -50964,11 +51187,16 @@ function resolveMilestone({ config, candidateMilestones, recommendedMilestone })
     return null;
   }
   const milestoneSetting = String(config.milestone).trim();
+  const findMilestoneMatch = (targetTitle) => {
+    if (!targetTitle) return null;
+    const cleanTarget = targetTitle.trim().toLowerCase();
+    return candidateMilestones.find(
+      (m2) => m2.title && m2.title.trim().toLowerCase() === cleanTarget
+    );
+  };
   if (milestoneSetting.toLowerCase() === "auto") {
     if (!recommendedMilestone) return null;
-    const match3 = candidateMilestones.find(
-      (m2) => m2.title.toLowerCase() === recommendedMilestone.toLowerCase()
-    );
+    const match3 = findMilestoneMatch(recommendedMilestone);
     if (!match3) {
       console.log(`[GitHub Action] AI recommendation "${recommendedMilestone}" did not match any open milestone.`);
       return null;
@@ -50979,9 +51207,7 @@ function resolveMilestone({ config, candidateMilestones, recommendedMilestone })
   if (!isNaN(asNumber) && String(asNumber) === milestoneSetting) {
     return asNumber;
   }
-  const match2 = candidateMilestones.find(
-    (m2) => m2.title.toLowerCase() === milestoneSetting.toLowerCase()
-  );
+  const match2 = findMilestoneMatch(milestoneSetting);
   return match2 ? match2.number : null;
 }
 async function runLocal(args) {
@@ -51223,6 +51449,13 @@ async function runGitHubAction() {
       repository
     });
   }
+  console.log(`[GitHub Action] Fetching open issues for relationship detection...`);
+  const candidateIssues = await fetchOpenIssues({
+    token: githubToken,
+    repository,
+    excludeIssueNumber: issueNumber,
+    limit: 30
+  });
   const issueDetails = await getIssueDetails({
     token: githubToken,
     repository,
@@ -51239,6 +51472,10 @@ async function runGitHubAction() {
     estimatedPriority,
     estimatedSize,
     recommendedMilestone,
+    relatedIssues = [],
+    blockedByIssues = [],
+    blockingIssues = [],
+    parentIssue = null,
     modelUsed
   } = await enhanceIssue(title, body, {
     model: config.geminiModel,
@@ -51246,13 +51483,49 @@ async function runGitHubAction() {
     customInstruction: config.customInstruction,
     enhanceTitle: config.enhanceTitle,
     availableLabels,
-    candidateMilestones: candidateMilestones.map((m2) => m2.title)
+    candidateMilestones: candidateMilestones.map((m2) => m2.title),
+    candidateIssues
   });
   const skipBodyUpdate = Boolean(isThorough && !forceEnhance);
   if (skipBodyUpdate) {
     console.log(
       `[GitHub Action] Issue #${issueNumber} was evaluated as thorough on its own. Preserving original body/title, updating triage attributes.`
     );
+  }
+  if (config.linkSubIssues && parentIssue && issueNodeId) {
+    const parentCandidate = candidateIssues.find((iss) => iss.number === parentIssue);
+    if (parentCandidate && parentCandidate.nodeId) {
+      console.log(`[GitHub Action] Linking issue #${issueNumber} as sub-issue of #${parentIssue}...`);
+      await linkSubIssue({
+        token: githubToken,
+        parentIssueId: parentCandidate.nodeId,
+        subIssueId: issueNodeId
+      });
+    }
+  }
+  if (config.linkDependencies && issueNodeId) {
+    for (const blockedByNum of blockedByIssues) {
+      const blockingCandidate = candidateIssues.find((iss) => iss.number === blockedByNum);
+      if (blockingCandidate && blockingCandidate.nodeId) {
+        console.log(`[GitHub Action] Linking issue #${issueNumber} as blocked by #${blockedByNum}...`);
+        await linkBlockedBy({
+          token: githubToken,
+          blockedIssueId: issueNodeId,
+          blockingIssueId: blockingCandidate.nodeId
+        });
+      }
+    }
+    for (const blockingNum of blockingIssues) {
+      const blockedCandidate = candidateIssues.find((iss) => iss.number === blockingNum);
+      if (blockedCandidate && blockedCandidate.nodeId) {
+        console.log(`[GitHub Action] Linking issue #${blockingNum} as blocked by #${issueNumber}...`);
+        await linkBlockedBy({
+          token: githubToken,
+          blockedIssueId: blockedCandidate.nodeId,
+          blockingIssueId: issueNodeId
+        });
+      }
+    }
   }
   const resolvedAssignees = resolveAssignees({
     repository,
@@ -51283,16 +51556,50 @@ async function runGitHubAction() {
     });
   }
   let createdBranchName = null;
+  let reusedBranchInfo = null;
   if (config.createBranch) {
-    createdBranchName = await createAndLinkBranch({
-      token: githubToken,
-      repository,
-      issueNumber,
-      issueTitle: enhancedTitle || title,
-      issueNodeId,
-      branchPrefix: config.branchPrefix
-    });
+    const candidateWorkIssues = Array.from(
+      new Set([parentIssue, ...blockedByIssues, ...blockingIssues, ...relatedIssues].filter(Boolean))
+    );
+    for (const relatedNum of candidateWorkIssues) {
+      const existingWork = await findIssueWorkAssociations({
+        token: githubToken,
+        repository,
+        issueNumber: relatedNum
+      });
+      if (existingWork && existingWork.branchName) {
+        reusedBranchInfo = {
+          issueNumber: relatedNum,
+          branchName: existingWork.branchName,
+          prNumber: existingWork.prNumber,
+          prUrl: existingWork.prUrl
+        };
+        console.log(
+          `[GitHub Action] Reusing existing work branch "${existingWork.branchName}" from related issue #${relatedNum}${existingWork.prNumber ? ` (PR #${existingWork.prNumber})` : ""}.`
+        );
+        break;
+      }
+    }
+    if (reusedBranchInfo) {
+      createdBranchName = reusedBranchInfo.branchName;
+    } else {
+      createdBranchName = await createAndLinkBranch({
+        token: githubToken,
+        repository,
+        issueNumber,
+        issueTitle: enhancedTitle || title,
+        issueNodeId,
+        branchPrefix: config.branchPrefix
+      });
+    }
   }
+  const relationshipDetails = {
+    relatedIssues: config.linkRelated ? relatedIssues : [],
+    blockedByIssues: config.linkDependencies ? blockedByIssues : [],
+    blockingIssues: config.linkDependencies ? blockingIssues : [],
+    parentIssue: config.linkSubIssues ? parentIssue : null,
+    reusedBranchInfo
+  };
   await updateGitHubIssue({
     token: githubToken,
     repository,
@@ -51310,7 +51617,8 @@ async function runGitHubAction() {
       addLabels: config.addLabels,
       recommendedLabels,
       skipBodyUpdate,
-      createdBranchName
+      createdBranchName,
+      relationshipDetails
     }
   });
   if ((config.projectUrl || config.projectNumber) && issueNodeId) {

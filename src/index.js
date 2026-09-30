@@ -13,7 +13,11 @@ import {
   getIssueDetails,
   assignUsersToIssue,
   setIssueMilestone,
-  createAndLinkBranch
+  createAndLinkBranch,
+  fetchOpenIssues,
+  findIssueWorkAssociations,
+  linkSubIssue,
+  linkBlockedBy
 } from "./github.js";
 import { assignIssueToProject } from "./projects.js";
 
@@ -127,11 +131,18 @@ function resolveMilestone({ config, candidateMilestones, recommendedMilestone })
 
   const milestoneSetting = String(config.milestone).trim();
 
+  // Helper for case-insensitive and whitespace-tolerant matching
+  const findMilestoneMatch = (targetTitle) => {
+    if (!targetTitle) return null;
+    const cleanTarget = targetTitle.trim().toLowerCase();
+    return candidateMilestones.find(
+      (m) => m.title && m.title.trim().toLowerCase() === cleanTarget
+    );
+  };
+
   if (milestoneSetting.toLowerCase() === "auto") {
     if (!recommendedMilestone) return null;
-    const match = candidateMilestones.find(
-      (m) => m.title.toLowerCase() === recommendedMilestone.toLowerCase()
-    );
+    const match = findMilestoneMatch(recommendedMilestone);
     if (!match) {
       console.log(`[GitHub Action] AI recommendation "${recommendedMilestone}" did not match any open milestone.`);
       return null;
@@ -144,9 +155,7 @@ function resolveMilestone({ config, candidateMilestones, recommendedMilestone })
     return asNumber;
   }
 
-  const match = candidateMilestones.find(
-    (m) => m.title.toLowerCase() === milestoneSetting.toLowerCase()
-  );
+  const match = findMilestoneMatch(milestoneSetting);
   return match ? match.number : null;
 }
 
@@ -415,7 +424,7 @@ async function runGitHubAction() {
     }
   }
 
-  // Fetch repository context (labels, milestones, issue node_id)
+  // Fetch repository context (labels, milestones, open issues, issue node_id)
   console.log(`[GitHub Action] Fetching repository labels and context for ${repository}...`);
   const availableLabels = await fetchRepositoryLabels({
     token: githubToken,
@@ -429,6 +438,15 @@ async function runGitHubAction() {
       repository
     });
   }
+
+  // Fetch open issues in the repository for relationship cross-checking
+  console.log(`[GitHub Action] Fetching open issues for relationship detection...`);
+  const candidateIssues = await fetchOpenIssues({
+    token: githubToken,
+    repository,
+    excludeIssueNumber: issueNumber,
+    limit: 30
+  });
 
   const issueDetails = await getIssueDetails({
     token: githubToken,
@@ -447,6 +465,10 @@ async function runGitHubAction() {
     estimatedPriority,
     estimatedSize,
     recommendedMilestone,
+    relatedIssues = [],
+    blockedByIssues = [],
+    blockingIssues = [],
+    parentIssue = null,
     modelUsed
   } = await enhanceIssue(title, body, {
     model: config.geminiModel,
@@ -454,7 +476,8 @@ async function runGitHubAction() {
     customInstruction: config.customInstruction,
     enhanceTitle: config.enhanceTitle,
     availableLabels,
-    candidateMilestones: candidateMilestones.map((m) => m.title)
+    candidateMilestones: candidateMilestones.map((m) => m.title),
+    candidateIssues
   });
 
   const skipBodyUpdate = Boolean(isThorough && !forceEnhance);
@@ -462,6 +485,46 @@ async function runGitHubAction() {
     console.log(
       `[GitHub Action] Issue #${issueNumber} was evaluated as thorough on its own. Preserving original body/title, updating triage attributes.`
     );
+  }
+
+  // Link Sub-Issue / Parent Issue via GraphQL if enabled
+  if (config.linkSubIssues && parentIssue && issueNodeId) {
+    const parentCandidate = candidateIssues.find((iss) => iss.number === parentIssue);
+    if (parentCandidate && parentCandidate.nodeId) {
+      console.log(`[GitHub Action] Linking issue #${issueNumber} as sub-issue of #${parentIssue}...`);
+      await linkSubIssue({
+        token: githubToken,
+        parentIssueId: parentCandidate.nodeId,
+        subIssueId: issueNodeId
+      });
+    }
+  }
+
+  // Link Blocked By Dependencies via GraphQL if enabled
+  if (config.linkDependencies && issueNodeId) {
+    for (const blockedByNum of blockedByIssues) {
+      const blockingCandidate = candidateIssues.find((iss) => iss.number === blockedByNum);
+      if (blockingCandidate && blockingCandidate.nodeId) {
+        console.log(`[GitHub Action] Linking issue #${issueNumber} as blocked by #${blockedByNum}...`);
+        await linkBlockedBy({
+          token: githubToken,
+          blockedIssueId: issueNodeId,
+          blockingIssueId: blockingCandidate.nodeId
+        });
+      }
+    }
+
+    for (const blockingNum of blockingIssues) {
+      const blockedCandidate = candidateIssues.find((iss) => iss.number === blockingNum);
+      if (blockedCandidate && blockedCandidate.nodeId) {
+        console.log(`[GitHub Action] Linking issue #${blockingNum} as blocked by #${issueNumber}...`);
+        await linkBlockedBy({
+          token: githubToken,
+          blockedIssueId: blockedCandidate.nodeId,
+          blockingIssueId: issueNodeId
+        });
+      }
+    }
   }
 
   // Automated Assignment (if enabled or configured)
@@ -498,18 +561,58 @@ async function runGitHubAction() {
     });
   }
 
-  // Development Branch Creation & Linking (if enabled)
+  // Development Branch Creation & Linking (or Reusing Existing Branch/PR from Related Issues)
   let createdBranchName = null;
+  let reusedBranchInfo = null;
+
   if (config.createBranch) {
-    createdBranchName = await createAndLinkBranch({
-      token: githubToken,
-      repository,
-      issueNumber,
-      issueTitle: enhancedTitle || title,
-      issueNodeId,
-      branchPrefix: config.branchPrefix
-    });
+    // Check if any related, parent, or blocking issues already have a PR or branch
+    const candidateWorkIssues = Array.from(
+      new Set([parentIssue, ...blockedByIssues, ...blockingIssues, ...relatedIssues].filter(Boolean))
+    );
+
+    for (const relatedNum of candidateWorkIssues) {
+      const existingWork = await findIssueWorkAssociations({
+        token: githubToken,
+        repository,
+        issueNumber: relatedNum
+      });
+      if (existingWork && existingWork.branchName) {
+        reusedBranchInfo = {
+          issueNumber: relatedNum,
+          branchName: existingWork.branchName,
+          prNumber: existingWork.prNumber,
+          prUrl: existingWork.prUrl
+        };
+        console.log(
+          `[GitHub Action] Reusing existing work branch "${existingWork.branchName}" from related issue #${relatedNum}${existingWork.prNumber ? ` (PR #${existingWork.prNumber})` : ""}.`
+        );
+        break;
+      }
+    }
+
+    if (reusedBranchInfo) {
+      createdBranchName = reusedBranchInfo.branchName;
+    } else {
+      createdBranchName = await createAndLinkBranch({
+        token: githubToken,
+        repository,
+        issueNumber,
+        issueTitle: enhancedTitle || title,
+        issueNodeId,
+        branchPrefix: config.branchPrefix
+      });
+    }
   }
+
+  // Construct relationship cross references for comment / issue body
+  const relationshipDetails = {
+    relatedIssues: config.linkRelated ? relatedIssues : [],
+    blockedByIssues: config.linkDependencies ? blockedByIssues : [],
+    blockingIssues: config.linkDependencies ? blockingIssues : [],
+    parentIssue: config.linkSubIssues ? parentIssue : null,
+    reusedBranchInfo
+  };
 
   // Update GitHub Issue body, title, labels, and contributor comment
   await updateGitHubIssue({
@@ -529,7 +632,8 @@ async function runGitHubAction() {
       addLabels: config.addLabels,
       recommendedLabels,
       skipBodyUpdate,
-      createdBranchName
+      createdBranchName,
+      relationshipDetails
     }
   });
 
