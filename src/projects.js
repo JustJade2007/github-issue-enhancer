@@ -404,19 +404,26 @@ export async function assignIssueToProject({
     console.log(`[Project] Successfully added issue to project (Item ID: ${itemId}).`);
 
     const updateFieldMutation = `
-      mutation updateField($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: ProjectV2FieldValueInput!) {
-        updateProjectV2ItemFieldValue(input: {
-          projectId: $projectId,
-          itemId: $itemId,
-          fieldId: $fieldId,
-          value: $value
-        }) {
+      mutation updateField($input: UpdateProjectV2ItemFieldValueInput!) {
+        updateProjectV2ItemFieldValue(input: $input) {
           projectV2Item {
             id
           }
         }
       }
     `;
+
+    // Helper to safely execute field updates
+    const setFieldValue = async (fieldId, value) => {
+      return octokit.graphql(updateFieldMutation, {
+        input: {
+          projectId: projectDetails.id,
+          itemId,
+          fieldId,
+          value
+        }
+      });
+    };
 
     // 1. Update Status (default: "Backlog")
     const targetStatus = status || "Backlog";
@@ -426,12 +433,7 @@ export async function assignIssueToProject({
         const optionId = matchSelectOption(statusField.options, targetStatus);
         if (optionId) {
           const matchedOpt = statusField.options.find((o) => o.id === optionId);
-          await octokit.graphql(updateFieldMutation, {
-            projectId: projectDetails.id,
-            itemId,
-            fieldId: statusField.id,
-            value: { singleSelectOptionId: optionId }
-          });
+          await setFieldValue(statusField.id, { singleSelectOptionId: optionId });
           console.log(`[Project] Set ${statusField.name} to "${matchedOpt?.name || targetStatus}".`);
         } else {
           console.log(
@@ -439,12 +441,7 @@ export async function assignIssueToProject({
           );
         }
       } else if (statusField.dataType === "TEXT") {
-        await octokit.graphql(updateFieldMutation, {
-          projectId: projectDetails.id,
-          itemId,
-          fieldId: statusField.id,
-          value: { text: targetStatus }
-        });
+        await setFieldValue(statusField.id, { text: targetStatus });
         console.log(`[Project] Set ${statusField.name} text to "${targetStatus}".`);
       }
     } else {
@@ -459,12 +456,7 @@ export async function assignIssueToProject({
           const optionId = matchSelectOption(pField.options, priority);
           if (optionId) {
             const matchedOpt = pField.options.find((o) => o.id === optionId);
-            await octokit.graphql(updateFieldMutation, {
-              projectId: projectDetails.id,
-              itemId,
-              fieldId: pField.id,
-              value: { singleSelectOptionId: optionId }
-            });
+            await setFieldValue(pField.id, { singleSelectOptionId: optionId });
             console.log(`[Project] Set ${pField.name} to "${matchedOpt?.name || priority}".`);
           } else {
             console.log(
@@ -472,12 +464,7 @@ export async function assignIssueToProject({
             );
           }
         } else if (pField.dataType === "TEXT") {
-          await octokit.graphql(updateFieldMutation, {
-            projectId: projectDetails.id,
-            itemId,
-            fieldId: pField.id,
-            value: { text: priority }
-          });
+          await setFieldValue(pField.id, { text: priority });
           console.log(`[Project] Set ${pField.name} text to "${priority}".`);
         }
       } else {
@@ -489,18 +476,13 @@ export async function assignIssueToProject({
 
     // 3. Update Size (if estimated or specified)
     if (size) {
-      const sField = findProjectField(projectDetails.fields, sizeFieldName, ["Size", "Estimate", "Estimation", "Complexity"]);
+      const sField = findProjectField(projectDetails.fields, sizeFieldName, ["Size", "Estimate", "Complexity"]);
       if (sField) {
         if (sField.dataType === "SINGLE_SELECT" && sField.options) {
           const optionId = matchSelectOption(sField.options, size);
           if (optionId) {
             const matchedOpt = sField.options.find((o) => o.id === optionId);
-            await octokit.graphql(updateFieldMutation, {
-              projectId: projectDetails.id,
-              itemId,
-              fieldId: sField.id,
-              value: { singleSelectOptionId: optionId }
-            });
+            await setFieldValue(sField.id, { singleSelectOptionId: optionId });
             console.log(`[Project] Set ${sField.name} to "${matchedOpt?.name || size}".`);
           } else {
             console.log(
@@ -508,12 +490,7 @@ export async function assignIssueToProject({
             );
           }
         } else if (sField.dataType === "TEXT") {
-          await octokit.graphql(updateFieldMutation, {
-            projectId: projectDetails.id,
-            itemId,
-            fieldId: sField.id,
-            value: { text: size }
-          });
+          await setFieldValue(sField.id, { text: size });
           console.log(`[Project] Set ${sField.name} text to "${size}".`);
         }
       } else {
