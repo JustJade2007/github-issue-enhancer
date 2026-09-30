@@ -2,7 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [2.7.0] - 2026-09-30
+
+### Changed
+- Sorted action.yml to look better for the user.
+
+## [2.6.0] - 2026-09-30
 
 ### Added
 - **Duplicate Detection & Auto-Closure:**
@@ -14,7 +19,7 @@ All notable changes to this project will be documented in this file.
   - Bypasses redundant downstream automation (development branch creation, milestone assignment, and project assignment) when an issue is closed as a duplicate.
   - Configurable via `close-duplicates` workflow input / `CLOSE_DUPLICATES` env / `--no-close-duplicates` CLI flag.
 
-## [0.5.0] - 2026-09-29
+## [2.5.0] - 2026-09-29
 
 ### Added
 - **Automated AI Triage & Dynamic Labeling:** Dynamically fetches existing repository labels and prompts Gemini to select appropriate labels based on issue content and scope, merging them with any configured static labels.
@@ -25,7 +30,7 @@ All notable changes to this project will be documented in this file.
 - **Development Branch Creation & Linking:** When `create-branch: true` is configured, automatically creates a dedicated development branch (`issue-{number}-{kebab-title}`) from the repository's default branch and associates it with the issue via GraphQL `createLinkedBranch`.
 - **Resilient Error Handling:** Gracefully warns and continues with issue body formatting and labeling if any third-party management step (project permissions, branch protection, or milestone) encounters an error.
 
-## [0.4.0] - 2026-09-29
+## [2.4.0] - 2026-09-29
 
 ### Added
 - **Issue Thoroughness Detection:** Automated evaluation determines if a newly opened issue is already thorough and well-explained (more than 2 well-written descriptive paragraphs or equivalent clear structure). When thorough, the action leaves the author's title and body intact and only posts contributor fix instructions (if enabled).
@@ -35,14 +40,14 @@ All notable changes to this project will be documented in this file.
 - **Safe Re-Enhancement Extraction:** Safely extracts the original raw text from existing `<details>` blocks or stripped markdown when re-enhancing already-enhanced issues, preventing recursive badges and marker duplication.
 - **Workflow Triggers:** Added `issue_comment: types: [created]` to `.github/workflows/enhance-issue.yml` and `.github/workflow-templates/enhance-issue.yml`.
 
-## [0.3.0] - 2026-09-29
+## [2.3.0] - 2026-09-29
 
 ### Added
 - **Contributor Fix Instructions in Comments:** When an issue is opened, Gemini now generates brief, practical instructions/guidance for anyone looking to fix or resolve the issue, and posts it as a comment.
 - **Applicability Filter:** Fix instructions are only generated and posted if applicable to the issue (e.g. actionable bugs, defects, features). If the issue is a question, discussion, non-actionable, or lacks sufficient context, no comment is posted.
 - **Single-Call Gemini Prompting:** Issue rewording and contributor fix instructions are generated in a unified API call with structured delimiters (`===ENHANCED_BODY===`, `===FIX_INSTRUCTIONS===`), minimizing token and API consumption.
 
-## [0.2.1] - 2026-09-27
+## [1.0.0] - 2026-09-27
 
 ### Changed
 - **Updated Baseline Model:** Set `gemini-3.1-flash-lite` as the standard default model across workflow definitions, templates, configuration defaults, action metadata, and environment templates.

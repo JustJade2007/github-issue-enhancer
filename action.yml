@@ -5,113 +5,126 @@ branding:
   icon: 'alert-circle'
   color: 'blue'
 inputs:
+  # --- Authentication ---
   gemini-api-key:
-    description: 'Google Gemini API Key'
+    description: 'Google Gemini API key'
     required: true
   github-token:
-    description: 'GitHub token with issues:write permission'
+    description: 'GitHub token for repository operations (defaults to github.token)'
     required: false
     default: ${{ github.token }}
+
+  # --- Model & Generation ---
   gemini-model:
-    description: 'Gemini model to use'
+    description: 'Gemini model name (default: gemini-3.1-flash-lite)'
     required: false
     default: 'gemini-3.1-flash-lite'
   temperature:
-    description: 'Sampling temperature for Gemini (0.0 to 1.0)'
+    description: 'Sampling temperature between 0.0 and 1.0 (default: 0.2)'
     required: false
     default: '0.2'
   custom-instruction:
-    description: 'Custom instructions or formatting guidelines for Gemini'
+    description: 'Custom guidelines or formatting instructions for Gemini'
     required: false
     default: ''
-  post-comment:
-    description: 'Whether to post a comment with contributor fix instructions if applicable (true/false)'
+
+  # --- Formatting & Output ---
+  enhance-title:
+    description: 'Reword and clarify issue title in addition to body (true/false)'
     required: false
-    default: 'true'
+    default: 'false'
   preserve-original:
-    description: 'Whether to append original submission in collapsible dropdown (true/false)'
+    description: 'Keep original submission in an expandable details section (true/false)'
     required: false
     default: 'true'
   add-badge:
-    description: 'Whether to prepend [!NOTE] header badge in issue body (true/false)'
+    description: 'Prepend [!NOTE] enhancement badge to the issue body (true/false)'
     required: false
     default: 'true'
-  enhance-title:
-    description: 'Whether to clarify and reword the issue title (true/false)'
+  post-comment:
+    description: 'Post contributor fix instructions comment when applicable (true/false)'
     required: false
-    default: 'false'
+    default: 'true'
+
+  # --- Filtering & Labels ---
   add-labels:
-    description: 'Comma-separated static labels to apply upon enhancement'
+    description: 'Static labels to apply upon enhancement (comma-separated)'
     required: false
     default: ''
   ignore-authors:
-    description: 'Comma-separated usernames/bots to ignore'
+    description: 'Usernames or bots to ignore (comma-separated)'
     required: false
     default: ''
   ignore-labels:
-    description: 'Comma-separated labels that skip enhancement if already present'
+    description: 'Skip enhancement if any of these labels exist (comma-separated)'
     required: false
     default: ''
-  project-url:
-    description: 'URL of the GitHub Project v2 (e.g. https://github.com/orgs/ORG/projects/1)'
+
+  # --- Issue Intelligence & Duplicates ---
+  close-duplicates:
+    description: 'Auto-detect duplicates, apply duplicate label, and close (true/false)'
     required: false
-    default: ''
-  project-token:
-    description: 'Token with project:write permission (defaults to github-token)'
-    required: false
-    default: ''
-  project-priority-field:
-    description: 'Field name for priority in GitHub Project (default: "Priority")'
-    required: false
-    default: 'Priority'
-  project-size-field:
-    description: 'Field name for size in GitHub Project (default: "Size")'
-    required: false
-    default: 'Size'
-  project-status-field:
-    description: 'Field name for status in GitHub Project (default: "Status")'
-    required: false
-    default: 'Status'
-  project-initial-status:
-    description: 'Initial status option to assign to newly added issues (default: "Backlog")'
-    required: false
-    default: 'Backlog'
-  auto-assign:
-    description: 'Whether to automatically assign repository owner or designated assignees (true/false)'
-    required: false
-    default: 'false'
-  assignees:
-    description: 'Comma-separated GitHub usernames to assign to the issue'
-    required: false
-    default: ''
-  milestone:
-    description: 'Milestone name, number, or "auto" to let Gemini pick from open milestones'
-    required: false
-    default: ''
-  create-branch:
-    description: 'Whether to create and link a development branch for this issue (true/false)'
-    required: false
-    default: 'false'
-  branch-prefix:
-    description: 'Prefix for newly created development branches (default: "issue-")'
-    required: false
-    default: 'issue-'
+    default: 'true'
   link-related:
-    description: 'Whether to detect and cross-reference related issues (true/false)'
+    description: 'Detect and cross-reference related repository issues (true/false)'
     required: false
     default: 'true'
   link-dependencies:
-    description: 'Whether to detect and link blocking/blocked-by issues (true/false)'
+    description: 'Detect and link blocking or blocked-by dependencies (true/false)'
     required: false
     default: 'true'
   link-sub-issues:
-    description: 'Whether to detect and link parent/sub-issues (true/false)'
+    description: 'Detect and link parent or sub-issues (true/false)'
     required: false
     default: 'true'
-  close-duplicates:
-    description: 'Whether to apply the duplicate label and close the issue if Gemini is certain it is a duplicate (true/false)'
+
+  # --- Assignees, Milestones & Branches ---
+  auto-assign:
+    description: 'Auto-assign repository owner or maintainers by domain (true/false)'
     required: false
-    default: 'true'
+    default: 'false'
+  assignees:
+    description: 'Specific GitHub usernames to assign (comma-separated)'
+    required: false
+    default: ''
+  milestone:
+    description: 'Milestone name, number, or auto to pick best open milestone'
+    required: false
+    default: ''
+  create-branch:
+    description: 'Create and link a development branch for this issue (true/false)'
+    required: false
+    default: 'false'
+  branch-prefix:
+    description: 'Prefix for created development branches (default: issue-)'
+    required: false
+    default: 'issue-'
+
+  # --- GitHub Projects v2 ---
+  project-url:
+    description: 'GitHub Projects v2 URL (e.g. https://github.com/orgs/ORG/projects/1)'
+    required: false
+    default: ''
+  project-token:
+    description: 'PAT with project scope for user-owned projects (defaults to github-token)'
+    required: false
+    default: ''
+  project-status-field:
+    description: 'Status field name in GitHub Project (default: Status)'
+    required: false
+    default: 'Status'
+  project-initial-status:
+    description: 'Initial status for added issues (default: Backlog)'
+    required: false
+    default: 'Backlog'
+  project-priority-field:
+    description: 'Priority field name in GitHub Project (default: Priority)'
+    required: false
+    default: 'Priority'
+  project-size-field:
+    description: 'Size field name in GitHub Project (default: Size)'
+    required: false
+    default: 'Size'
 
 runs:
   using: 'composite'
@@ -124,7 +137,7 @@ runs:
     - name: Format Issue with Gemini
       shell: bash
       env:
-        GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
+        # Context
         GITHUB_TOKEN: ${{ inputs.github-token }}
         GH_TOKEN: ${{ inputs.github-token }}
         ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -137,29 +150,42 @@ runs:
         COMMENT_ID: ${{ github.event.comment.id }}
         COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
         COMMENT_AUTHOR_ASSOCIATION: ${{ github.event.comment.author_association }}
+
+        # Authentication & AI
+        GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
         GEMINI_MODEL: ${{ inputs.gemini-model }}
         TEMPERATURE: ${{ inputs.temperature }}
         CUSTOM_INSTRUCTION: ${{ inputs.custom-instruction }}
-        POST_COMMENT: ${{ inputs.post-comment }}
+
+        # Formatting & Output
+        ENHANCE_TITLE: ${{ inputs.enhance-title }}
         PRESERVE_ORIGINAL: ${{ inputs.preserve-original }}
         ADD_BADGE: ${{ inputs.add-badge }}
-        ENHANCE_TITLE: ${{ inputs.enhance-title }}
+        POST_COMMENT: ${{ inputs.post-comment }}
+
+        # Filtering & Labels
         ADD_LABELS: ${{ inputs.add-labels }}
         IGNORE_AUTHORS: ${{ inputs.ignore-authors }}
         IGNORE_LABELS: ${{ inputs.ignore-labels }}
-        PROJECT_URL: ${{ inputs.project-url }}
-        PROJECT_TOKEN: ${{ inputs.project-token }}
-        PROJECT_PRIORITY_FIELD: ${{ inputs.project-priority-field }}
-        PROJECT_SIZE_FIELD: ${{ inputs.project-size-field }}
-        PROJECT_STATUS_FIELD: ${{ inputs.project-status-field }}
-        PROJECT_INITIAL_STATUS: ${{ inputs.project-initial-status }}
+
+        # Intelligence & Duplicates
+        CLOSE_DUPLICATES: ${{ inputs.close-duplicates }}
+        LINK_RELATED: ${{ inputs.link-related }}
+        LINK_DEPENDENCIES: ${{ inputs.link-dependencies }}
+        LINK_SUB_ISSUES: ${{ inputs.link-sub-issues }}
+
+        # Assignees, Milestones & Branches
         AUTO_ASSIGN: ${{ inputs.auto-assign }}
         ASSIGNEES: ${{ inputs.assignees }}
         MILESTONE: ${{ inputs.milestone }}
         CREATE_BRANCH: ${{ inputs.create-branch }}
         BRANCH_PREFIX: ${{ inputs.branch-prefix }}
-        LINK_RELATED: ${{ inputs.link-related }}
-        LINK_DEPENDENCIES: ${{ inputs.link-dependencies }}
-        LINK_SUB_ISSUES: ${{ inputs.link-sub-issues }}
-        CLOSE_DUPLICATES: ${{ inputs.close-duplicates }}
+
+        # GitHub Projects v2
+        PROJECT_URL: ${{ inputs.project-url }}
+        PROJECT_TOKEN: ${{ inputs.project-token }}
+        PROJECT_STATUS_FIELD: ${{ inputs.project-status-field }}
+        PROJECT_INITIAL_STATUS: ${{ inputs.project-initial-status }}
+        PROJECT_PRIORITY_FIELD: ${{ inputs.project-priority-field }}
+        PROJECT_SIZE_FIELD: ${{ inputs.project-size-field }}
       run: node "${{ github.action_path }}/dist/index.mjs"
