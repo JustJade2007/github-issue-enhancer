@@ -57,7 +57,7 @@ jobs:
 
           # --- Triage, Assignment, Milestones & Branches ---
           # Automatically assign repository owner or designated assignees (default: false)
-          auto-assign: 'false'
+          auto-assign: 'true'
           # Comma-separated GitHub usernames to assign (optional)
           assignees: ''
           # Milestone to associate (e.g. 'v1.0.0' or 'auto' for Gemini auto-selection)
@@ -77,7 +77,7 @@ jobs:
 
           # --- GitHub Projects v2 Management ---
           # Project URL (e.g. 'https://github.com/orgs/my-org/projects/1' or 'https://github.com/users/my-user/projects/1')
-          project-url: ''
+          project-url: 'https://github.com/users/JustJade2007/projects/2'
           # Optional token for projects (use GH_PAT or PROJECT_TOKEN secret; defaults to github.token)
           project-token: ${{ secrets.GH_PAT || secrets.PROJECT_TOKEN || secrets.PAT_TOKEN || github.token }}
           # Field name for Priority in project (default: 'Priority')
