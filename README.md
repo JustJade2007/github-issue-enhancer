@@ -63,7 +63,7 @@ jobs:
 
           # --- Required Authentication ---
           gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
-          github-token: ${{ secrets.GH_PAT || secrets.PAT_TOKEN || github.token }}
+          github-token: ${{ github.token }}
 
           # --- Model & Generation Settings ---
           # Specify Gemini model (default: gemini-3.1-flash-lite)
@@ -106,8 +106,8 @@ jobs:
           # --- GitHub Projects v2 Management ---
           # Project URL (e.g. 'https://github.com/orgs/my-org/projects/1' or 'https://github.com/users/my-user/projects/1')
           project-url: ''
-          # Optional token for projects (use PROJECT_TOKEN or GH_PAT secret; defaults to github.token)
-          project-token: ${{ secrets.PROJECT_TOKEN || secrets.GH_PAT || secrets.PAT_TOKEN || github.token }}
+          # Optional token for projects (use GH_PAT or PROJECT_TOKEN secret; defaults to github.token)
+          project-token: ${{ secrets.GH_PAT || secrets.PROJECT_TOKEN || secrets.PAT_TOKEN || github.token }}
 ```
 
 ### Step 2: Add Secrets to the Target Repository
