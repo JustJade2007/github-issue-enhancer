@@ -108,6 +108,10 @@ inputs:
     description: 'Whether to detect and link parent/sub-issues (true/false)'
     required: false
     default: 'true'
+  close-duplicates:
+    description: 'Whether to apply the duplicate label and close the issue if Gemini is certain it is a duplicate (true/false)'
+    required: false
+    default: 'true'
 
 runs:
   using: 'composite'
@@ -157,4 +161,5 @@ runs:
         LINK_RELATED: ${{ inputs.link-related }}
         LINK_DEPENDENCIES: ${{ inputs.link-dependencies }}
         LINK_SUB_ISSUES: ${{ inputs.link-sub-issues }}
+        CLOSE_DUPLICATES: ${{ inputs.close-duplicates }}
       run: node "${{ github.action_path }}/dist/index.mjs"

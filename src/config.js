@@ -28,7 +28,8 @@ export const DEFAULT_CONFIG = {
   branchPrefix: "issue-",
   linkRelated: true,
   linkDependencies: true,
-  linkSubIssues: true
+  linkSubIssues: true,
+  closeDuplicates: true
 };
 
 /**
@@ -284,7 +285,15 @@ export function loadConfig(overrides = {}) {
         ? parseBoolean(env.LINK_SUB_ISSUES, DEFAULT_CONFIG.linkSubIssues)
         : fileConfig.triage?.linkSubIssues !== undefined
         ? parseBoolean(fileConfig.triage.linkSubIssues, DEFAULT_CONFIG.linkSubIssues)
-        : DEFAULT_CONFIG.linkSubIssues
+        : DEFAULT_CONFIG.linkSubIssues,
+    closeDuplicates:
+      overrides.closeDuplicates !== undefined
+        ? parseBoolean(overrides.closeDuplicates, DEFAULT_CONFIG.closeDuplicates)
+        : env.CLOSE_DUPLICATES !== undefined
+        ? parseBoolean(env.CLOSE_DUPLICATES, DEFAULT_CONFIG.closeDuplicates)
+        : fileConfig.triage?.closeDuplicates !== undefined
+        ? parseBoolean(fileConfig.triage.closeDuplicates, DEFAULT_CONFIG.closeDuplicates)
+        : DEFAULT_CONFIG.closeDuplicates
   };
 
   // Ensure temperature stays in valid range

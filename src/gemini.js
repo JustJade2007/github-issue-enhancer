@@ -11,7 +11,8 @@ Your task is fourfold:
    - Estimate the priority (P0: Blocker/Critical/Urgent, P1: High, P2: Medium/Normal, P3: Low/Minor).
    - Estimate the scope/size (XS: Tiny/Trivial, S: Small, M: Medium, L: Large, XL: Very Large/Epic).
    - If candidate milestones are provided, select the best matching milestone.
-   - If candidate open issues are provided, identify relationships between the current issue and existing issues:
+   - If candidate repository issues (open or closed) are provided, check for duplicates and relationships:
+     * DUPLICATE_OF: If you are DEFINITIVELY CERTAIN that this issue reports the exact same underlying bug, defect, feature, or request as an existing issue (open or closed), specify its issue number (e.g., #12). Do NOT mark as duplicate if it merely relates to the same topic or module; mark duplicate ONLY when you are confident it is an exact duplicate. Otherwise, output 'NONE'.
      * RELATED: Issues that touch the same area, component, or workflow.
      * BLOCKED_BY: Existing open issues that must be solved before this issue can be completed.
      * BLOCKING: Existing open issues that cannot be completed until this issue is solved.
@@ -36,7 +37,8 @@ TRIAGE CLASSIFICATION GUIDELINES:
 - LABELS: Pick only labels that accurately describe the type, component, or status based on available labels.
 - PRIORITY: Assign P0 for crashes/data loss/security, P1 for major broken functionality, P2 for normal bugs/features, P3 for typos/minor enhancements.
 - SIZE: XS (1-line / simple fix), S (small self-contained fix), M (standard feature/bug fix), L (multi-component change), XL (large architectural refactor).
-- RELATIONSHIPS: Only reference issue numbers from the provided Candidate Open Issues list if there is a clear, meaningful connection. If no issues apply, output 'NONE'.`;
+- DUPLICATES: Only output an issue number if you are strictly certain. False positive duplicate closures frustrate users; when in doubt, leave DUPLICATE_OF as 'NONE' and list under RELATED_ISSUES instead.
+- RELATIONSHIPS: Only reference issue numbers from the provided Candidate Issues list if there is a clear, meaningful connection. If no issues apply, output 'NONE'.`;
 
 const DEFAULT_MODELS = [
   process.env.GEMINI_MODEL,
@@ -95,23 +97,25 @@ export function parseGeminiResponse(rawText, enhanceTitle = false) {
   let estimatedPriority = null;
   let estimatedSize = null;
   let recommendedMilestone = null;
+  let duplicateOf = null;
   let relatedIssues = [];
   let blockedByIssues = [];
   let blockingIssues = [];
   let parentIssue = null;
 
-  const thoroughMatch = rawText.match(/===IS_THOROUGH===\s*([\s\S]*?)(?====ENHANCED_TITLE===|===ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const thoroughMatch = rawText.match(/===IS_THOROUGH===\s*([\s\S]*?)(?====ENHANCED_TITLE===|===ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
   if (thoroughMatch && thoroughMatch[1].trim()) {
     isThorough = thoroughMatch[1].trim().toUpperCase().startsWith("YES");
   }
 
-  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
-  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
-  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)(?====RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
-  const labelsMatch = rawText.match(/===RECOMMENDED_LABELS===\s*([\s\S]*?)(?====ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
-  const priorityMatch = rawText.match(/===ESTIMATED_PRIORITY===\s*([\s\S]*?)(?====ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
-  const sizeMatch = rawText.match(/===ESTIMATED_SIZE===\s*([\s\S]*?)(?====RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
-  const milestoneMatch = rawText.match(/===RECOMMENDED_MILESTONE===\s*([\s\S]*?)(?====RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)(?====RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const labelsMatch = rawText.match(/===RECOMMENDED_LABELS===\s*([\s\S]*?)(?====ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const priorityMatch = rawText.match(/===ESTIMATED_PRIORITY===\s*([\s\S]*?)(?====ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const sizeMatch = rawText.match(/===ESTIMATED_SIZE===\s*([\s\S]*?)(?====RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const milestoneMatch = rawText.match(/===RECOMMENDED_MILESTONE===\s*([\s\S]*?)(?====DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const duplicateMatch = rawText.match(/===DUPLICATE_OF===\s*([\s\S]*?)(?====RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
   const relatedMatch = rawText.match(/===RELATED_ISSUES===\s*([\s\S]*?)(?====BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
   const blockedByMatch = rawText.match(/===BLOCKED_BY_ISSUES===\s*([\s\S]*?)(?====BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
   const blockingMatch = rawText.match(/===BLOCKING_ISSUES===\s*([\s\S]*?)(?====PARENT_ISSUE===|$)/i);
@@ -132,6 +136,7 @@ export function parseGeminiResponse(rawText, enhanceTitle = false) {
     if (priorityMatch) cleaned = cleaned.replace(priorityMatch[0], "");
     if (sizeMatch) cleaned = cleaned.replace(sizeMatch[0], "");
     if (milestoneMatch) cleaned = cleaned.replace(milestoneMatch[0], "");
+    if (duplicateMatch) cleaned = cleaned.replace(duplicateMatch[0], "");
     if (relatedMatch) cleaned = cleaned.replace(relatedMatch[0], "");
     if (blockedByMatch) cleaned = cleaned.replace(blockedByMatch[0], "");
     if (blockingMatch) cleaned = cleaned.replace(blockingMatch[0], "");
@@ -186,6 +191,16 @@ export function parseGeminiResponse(rawText, enhanceTitle = false) {
     }
   }
 
+  if (duplicateMatch && duplicateMatch[1].trim()) {
+    const dText = duplicateMatch[1].trim();
+    if (dText.toLowerCase() !== "none" && dText.toLowerCase() !== "n/a") {
+      const dNumMatch = dText.match(/(?:#)?(\d+)/);
+      if (dNumMatch) {
+        duplicateOf = parseInt(dNumMatch[1], 10);
+      }
+    }
+  }
+
   const parseIssueList = (match) => {
     if (!match || !match[1].trim()) return [];
     const text = match[1].trim();
@@ -222,6 +237,7 @@ export function parseGeminiResponse(rawText, enhanceTitle = false) {
     estimatedPriority,
     estimatedSize,
     recommendedMilestone,
+    duplicateOf,
     relatedIssues,
     blockedByIssues,
     blockingIssues,
@@ -289,14 +305,14 @@ export async function enhanceIssue(title, body, options = {}) {
     : `(No open milestones available)`;
 
   const issuesContext = candidateIssues.length > 0
-    ? `Candidate Open Issues in Repository:\n${candidateIssues.map((iss) => `#${iss.number}: ${iss.title}${iss.body ? ` - ${iss.body.slice(0, 140).replace(/\r?\n/g, " ")}...` : ""}`).join("\n")}`
-    : `(No other open issues in repository)`;
+    ? `Candidate Repository Issues (open and recently closed):\n${candidateIssues.map((iss) => `#${iss.number} [${(iss.state || "open").toUpperCase()}]: ${iss.title}${iss.body ? ` - ${iss.body.slice(0, 140).replace(/\r?\n/g, " ")}...` : ""}`).join("\n")}`
+    : `(No other issues in repository)`;
 
   const titleSection = enhanceTitle
     ? `===ENHANCED_TITLE===\n<rewritten clear, concise, and professional issue title>\n\n`
     : "";
 
-  const prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue description for clarity and structure, provide brief fix instructions if applicable, and determine triage metadata (labels, priority, size, milestone, and issue relationships).
+  const prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue description for clarity and structure, provide brief fix instructions if applicable, and determine triage metadata (labels, priority, size, milestone, duplicate status, and issue relationships).
 
 ${labelsContext}
 ${milestonesContext}
@@ -325,14 +341,17 @@ ${titleSection}===ENHANCED_BODY===
 ===RECOMMENDED_MILESTONE===
 <exact name of matching milestone from Candidate Open Milestones, or 'NONE'>
 
+===DUPLICATE_OF===
+<issue number from Candidate Repository Issues if you are STRICTLY and DEFINITIVELY CERTAIN this issue is an exact duplicate of an existing open or closed issue, e.g. #12, otherwise strictly 'NONE'>
+
 ===RELATED_ISSUES===
-<comma-separated list of issue numbers from Candidate Open Issues that are related, e.g. #12, #34, or 'NONE'>
+<comma-separated list of issue numbers from Candidate Repository Issues that are related, e.g. #12, #34, or 'NONE'>
 
 ===BLOCKED_BY_ISSUES===
-<comma-separated list of issue numbers from Candidate Open Issues that block this issue, e.g. #12, or 'NONE'>
+<comma-separated list of issue numbers from Candidate Repository Issues that block this issue, e.g. #12, or 'NONE'>
 
 ===BLOCKING_ISSUES===
-<comma-separated list of issue numbers from Candidate Open Issues that are blocked by this issue, e.g. #34, or 'NONE'>
+<comma-separated list of issue numbers from Candidate Repository Issues that are blocked by this issue, e.g. #34, or 'NONE'>
 
 ===PARENT_ISSUE===
 <issue number of candidate parent/epic issue that this issue belongs to as a sub-issue, e.g. #56, or 'NONE'>
@@ -374,6 +393,7 @@ ${body || "(No description provided)"}`;
           estimatedPriority: parsed.estimatedPriority,
           estimatedSize: parsed.estimatedSize,
           recommendedMilestone: parsed.recommendedMilestone,
+          duplicateOf: parsed.duplicateOf,
           relatedIssues: parsed.relatedIssues,
           blockedByIssues: parsed.blockedByIssues,
           blockingIssues: parsed.blockingIssues,

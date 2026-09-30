@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Duplicate Detection & Auto-Closure:**
+  - Evaluates new issues against existing candidate issues (both open and recently closed).
+  - Prompts Gemini with strict criteria: only specify `===DUPLICATE_OF===` if definitively certain an issue duplicates an existing one.
+  - Automatically applies the `duplicate` label to confirmed duplicate issues.
+  - Posts a notification comment linking directly to the existing issue (`Duplicate of #<number>`).
+  - Closes duplicate issues automatically with `state: "closed"` and `state_reason: "not_planned"`.
+  - Bypasses redundant downstream automation (development branch creation, milestone assignment, and project assignment) when an issue is closed as a duplicate.
+  - Configurable via `close-duplicates` workflow input / `CLOSE_DUPLICATES` env / `--no-close-duplicates` CLI flag.
+
 ## [0.5.0] - 2026-09-29
 
 ### Added

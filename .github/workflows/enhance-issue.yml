@@ -72,6 +72,8 @@ jobs:
           link-dependencies: 'true'
           # Detect and link parent / sub-issues (default: true)
           link-sub-issues: 'true'
+          # Apply duplicate label and close as duplicate when certain (default: true)
+          close-duplicates: 'true'
 
           # --- GitHub Projects v2 Management ---
           # Project URL (e.g. 'https://github.com/orgs/my-org/projects/1' or 'https://github.com/users/my-user/projects/1')

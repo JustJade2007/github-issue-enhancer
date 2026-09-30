@@ -5,6 +5,7 @@ An automated GitHub workflow and CLI utility powered by Google Gemini Flash Lite
 ## Features
 
 - **Strict Content Fidelity:** Reorganizes messy or shorthand descriptions into clean GitHub Flavored Markdown (Summary, Details, Context, Logs) while strictly preserving original technical boundaries and without inventing steps or solutions.
+- **Duplicate Detection & Auto-Closure:** Evaluates candidate repository issues (both open and recently closed). If Gemini is definitively certain that a newly opened issue is a duplicate of an existing issue, it automatically applies the `duplicate` label, links to the original issue in a notification comment, closes the issue as `not_planned`, and bypasses redundant tasks (branch creation, milestone/project assignment).
 - **Issue Thoroughness Detection:** Automatically evaluates new issues upon creation. If an issue is already thorough and well-explained (more than 2 well-written descriptive paragraphs or equivalent clear structure), the action preserves the author's original title and body, only updating triage metadata and posting contributor fix instructions if applicable.
 - **Automated AI Triage & Dynamic Labeling:** Dynamically fetches existing repository labels and uses Gemini to analyze the issue and select appropriate matching labels (such as bug, frontend, backend, documentation), combined with any static configured labels.
 - **GitHub Projects v2 Organization:** Seamlessly adds the issue to your GitHub Project v2 (via project URL or number) and populates custom fields like **Priority** (P0-P3 / Urgent, High, Medium, Low) and **Size** (XS, S, M, L, XL) using Gemini's triage classification.
@@ -159,6 +160,7 @@ The table below outlines all available settings under `with:`:
 | `milestone` | string | `''` | Milestone title/number to associate, or `'auto'` to let Gemini select from open repository milestones. |
 | `create-branch` | boolean / string | `'false'` | Whether to automatically create and link a development branch for the issue. |
 | `branch-prefix` | string | `'issue-'` | Prefix used when naming newly created development branches (e.g. `issue-12-login-bug`). |
+| `close-duplicates` | boolean / string | `'true'` | Whether to apply the `duplicate` label and close the issue if Gemini is certain it duplicates an existing issue. |
 
 ### Optional Repository Configuration File
 

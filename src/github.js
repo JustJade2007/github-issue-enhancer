@@ -124,18 +124,19 @@ export async function fetchRepositoryMilestones({ token, repository }) {
  * @param {string} params.token
  * @param {string} params.repository
  * @param {number|string} params.excludeIssueNumber
- * @param {number} [params.limit=30]
- * @returns {Promise<Array<{ number: number, title: string, nodeId: string, body: string, linkedBranch?: string, prNumber?: number }>>}
+ * @param {number} [params.limit=50]
+ * @returns {Promise<Array<{ number: number, title: string, nodeId: string, body: string, state: string, milestone?: { number: number, title: string }|null }>>}
  */
-export async function fetchOpenIssues({ token, repository, excludeIssueNumber, limit = 30 }) {
+export async function fetchOpenIssues({ token, repository, excludeIssueNumber, limit = 50 }) {
   if (!token || !repository) return [];
   try {
     const [owner, repo] = repository.split("/");
     const octokit = new Octokit({ auth: token });
+    // Fetch both open and closed issues so Gemini can identify duplicates and dependencies
     const { data } = await octokit.rest.issues.listForRepo({
       owner,
       repo,
-      state: "open",
+      state: "all",
       sort: "updated",
       direction: "desc",
       per_page: Math.min(limit, 100)
@@ -143,19 +144,20 @@ export async function fetchOpenIssues({ token, repository, excludeIssueNumber, l
 
     const currentNum = parseInt(excludeIssueNumber, 10);
     // Exclude pull requests (GitHub API listForRepo includes PRs unless filtered) and the current issue
-    const openIssues = data
+    const candidateIssues = data
       .filter((item) => !item.pull_request && item.number !== currentNum)
       .slice(0, limit);
 
-    return openIssues.map((item) => ({
+    return candidateIssues.map((item) => ({
       number: item.number,
       title: item.title,
       nodeId: item.node_id,
       body: item.body || "",
+      state: item.state || "open",
       milestone: item.milestone ? { number: item.milestone.number, title: item.milestone.title } : null
     }));
   } catch (err) {
-    console.warn(`[GitHub] Warning: Could not fetch open issues for relationship detection:`, err.message);
+    console.warn(`[GitHub] Warning: Could not fetch candidate issues for relationship/duplicate detection:`, err.message);
     return [];
   }
 }
@@ -562,10 +564,13 @@ export async function updateGitHubIssue({
     priorityField = "Priority",
     sizeField = "Size",
     createdBranchName = null,
-    relationshipDetails = null
+    relationshipDetails = null,
+    duplicateOf = null
   } = options;
 
   const octokit = new Octokit({ auth: token });
+
+  const isDuplicate = Boolean(duplicateOf);
 
   // 1. Update issue body & title if not skipped
   if (skipBodyUpdate) {
@@ -574,7 +579,14 @@ export async function updateGitHubIssue({
     // Construct new body respecting user settings
     const bodyParts = [ENHANCED_MARKER];
 
-    if (addBadge) {
+    if (isDuplicate) {
+      bodyParts.push(
+        "> [!WARNING]",
+        `> **Duplicate Issue Detected**`,
+        `> This issue has been identified as a duplicate of #${duplicateOf} and closed automatically.`,
+        ""
+      );
+    } else if (addBadge) {
       bodyParts.push(
         "> [!NOTE]",
         "> **Issue Formatted with Gemini Flash Lite**",
@@ -612,14 +624,40 @@ export async function updateGitHubIssue({
       updatePayload.title = enhancedTitle;
     }
 
+    if (isDuplicate) {
+      updatePayload.state = "closed";
+      updatePayload.state_reason = "not_planned";
+    }
+
     console.log(`[GitHub] Updating issue #${num} in ${owner}/${repo}...`);
     await octokit.rest.issues.update(updatePayload);
-    console.log(`[GitHub] Successfully updated issue #${num} description.`);
+    console.log(`[GitHub] Successfully updated issue #${num} description${isDuplicate ? " and closed as duplicate" : ""}.`);
   }
 
-  // 2. Merge and apply labels (configured addLabels + AI recommendedLabels)
+  // If body update was skipped but issue is a duplicate, close it now
+  if (skipBodyUpdate && isDuplicate) {
+    console.log(`[GitHub] Closing issue #${num} as duplicate of #${duplicateOf}...`);
+    try {
+      await octokit.rest.issues.update({
+        owner,
+        repo,
+        issue_number: num,
+        state: "closed",
+        state_reason: "not_planned"
+      });
+      console.log(`[GitHub] Successfully closed issue #${num} as duplicate.`);
+    } catch (closeErr) {
+      console.warn(`[GitHub] Warning: Failed to close issue #${num}:`, closeErr.message);
+    }
+  }
+
+  // 2. Merge and apply labels (configured addLabels + AI recommendedLabels + duplicate if applicable)
+  const allLabels = [...addLabels, ...recommendedLabels];
+  if (isDuplicate && !allLabels.includes("duplicate")) {
+    allLabels.push("duplicate");
+  }
   const combinedLabels = Array.from(
-    new Set([...addLabels, ...recommendedLabels].map((l) => l.trim()).filter(Boolean))
+    new Set(allLabels.map((l) => l.trim()).filter(Boolean))
   );
 
   if (combinedLabels.length > 0) {
@@ -649,10 +687,20 @@ export async function updateGitHubIssue({
       rel.reusedBranchInfo
     );
 
-    if (hasFixInstructions || hasRelationships || createdBranchName) {
+    if (isDuplicate || hasFixInstructions || hasRelationships || createdBranchName) {
       const commentLines = [];
 
-      if (hasFixInstructions) {
+      if (isDuplicate) {
+        commentLines.push(
+          "> [!WARNING]",
+          "> ### 🚫 Closed as Duplicate",
+          `> This issue has been evaluated as a duplicate of #${duplicateOf} and has been closed.`,
+          `> `,
+          `> Please refer to #${duplicateOf} for ongoing discussion and progress.`
+        );
+      }
+
+      if (hasFixInstructions && !isDuplicate) {
         commentLines.push(
           "> [!TIP]",
           "> ### 💡 Instructions to Fix This Issue",
@@ -698,7 +746,7 @@ export async function updateGitHubIssue({
 
       const commentContent = commentLines.join("\n");
 
-      console.log(`[GitHub] Posting contributor fix instructions comment to issue #${num}...`);
+      console.log(`[GitHub] Posting ${isDuplicate ? "duplicate notification" : "contributor fix instructions"} comment to issue #${num}...`);
       await octokit.rest.issues.createComment({
         owner,
         repo,

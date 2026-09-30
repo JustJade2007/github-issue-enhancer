@@ -22931,7 +22931,8 @@ var DEFAULT_CONFIG = {
   branchPrefix: "issue-",
   linkRelated: true,
   linkDependencies: true,
-  linkSubIssues: true
+  linkSubIssues: true,
+  closeDuplicates: true
 };
 function parseBoolean(val, defaultValue = true) {
   if (val === void 0 || val === null || val === "") return defaultValue;
@@ -22996,7 +22997,8 @@ function loadConfig(overrides = {}) {
     branchPrefix: overrides.branchPrefix || env2.BRANCH_PREFIX || fileConfig.triage?.branchPrefix || DEFAULT_CONFIG.branchPrefix,
     linkRelated: overrides.linkRelated !== void 0 ? parseBoolean(overrides.linkRelated, DEFAULT_CONFIG.linkRelated) : env2.LINK_RELATED !== void 0 ? parseBoolean(env2.LINK_RELATED, DEFAULT_CONFIG.linkRelated) : fileConfig.triage?.linkRelated !== void 0 ? parseBoolean(fileConfig.triage.linkRelated, DEFAULT_CONFIG.linkRelated) : DEFAULT_CONFIG.linkRelated,
     linkDependencies: overrides.linkDependencies !== void 0 ? parseBoolean(overrides.linkDependencies, DEFAULT_CONFIG.linkDependencies) : env2.LINK_DEPENDENCIES !== void 0 ? parseBoolean(env2.LINK_DEPENDENCIES, DEFAULT_CONFIG.linkDependencies) : fileConfig.triage?.linkDependencies !== void 0 ? parseBoolean(fileConfig.triage.linkDependencies, DEFAULT_CONFIG.linkDependencies) : DEFAULT_CONFIG.linkDependencies,
-    linkSubIssues: overrides.linkSubIssues !== void 0 ? parseBoolean(overrides.linkSubIssues, DEFAULT_CONFIG.linkSubIssues) : env2.LINK_SUB_ISSUES !== void 0 ? parseBoolean(env2.LINK_SUB_ISSUES, DEFAULT_CONFIG.linkSubIssues) : fileConfig.triage?.linkSubIssues !== void 0 ? parseBoolean(fileConfig.triage.linkSubIssues, DEFAULT_CONFIG.linkSubIssues) : DEFAULT_CONFIG.linkSubIssues
+    linkSubIssues: overrides.linkSubIssues !== void 0 ? parseBoolean(overrides.linkSubIssues, DEFAULT_CONFIG.linkSubIssues) : env2.LINK_SUB_ISSUES !== void 0 ? parseBoolean(env2.LINK_SUB_ISSUES, DEFAULT_CONFIG.linkSubIssues) : fileConfig.triage?.linkSubIssues !== void 0 ? parseBoolean(fileConfig.triage.linkSubIssues, DEFAULT_CONFIG.linkSubIssues) : DEFAULT_CONFIG.linkSubIssues,
+    closeDuplicates: overrides.closeDuplicates !== void 0 ? parseBoolean(overrides.closeDuplicates, DEFAULT_CONFIG.closeDuplicates) : env2.CLOSE_DUPLICATES !== void 0 ? parseBoolean(env2.CLOSE_DUPLICATES, DEFAULT_CONFIG.closeDuplicates) : fileConfig.triage?.closeDuplicates !== void 0 ? parseBoolean(fileConfig.triage.closeDuplicates, DEFAULT_CONFIG.closeDuplicates) : DEFAULT_CONFIG.closeDuplicates
   };
   if (isNaN(config.temperature) || config.temperature < 0 || config.temperature > 1) {
     config.temperature = DEFAULT_CONFIG.temperature;
@@ -46402,7 +46404,8 @@ Your task is fourfold:
    - Estimate the priority (P0: Blocker/Critical/Urgent, P1: High, P2: Medium/Normal, P3: Low/Minor).
    - Estimate the scope/size (XS: Tiny/Trivial, S: Small, M: Medium, L: Large, XL: Very Large/Epic).
    - If candidate milestones are provided, select the best matching milestone.
-   - If candidate open issues are provided, identify relationships between the current issue and existing issues:
+   - If candidate repository issues (open or closed) are provided, check for duplicates and relationships:
+     * DUPLICATE_OF: If you are DEFINITIVELY CERTAIN that this issue reports the exact same underlying bug, defect, feature, or request as an existing issue (open or closed), specify its issue number (e.g., #12). Do NOT mark as duplicate if it merely relates to the same topic or module; mark duplicate ONLY when you are confident it is an exact duplicate. Otherwise, output 'NONE'.
      * RELATED: Issues that touch the same area, component, or workflow.
      * BLOCKED_BY: Existing open issues that must be solved before this issue can be completed.
      * BLOCKING: Existing open issues that cannot be completed until this issue is solved.
@@ -46427,7 +46430,8 @@ TRIAGE CLASSIFICATION GUIDELINES:
 - LABELS: Pick only labels that accurately describe the type, component, or status based on available labels.
 - PRIORITY: Assign P0 for crashes/data loss/security, P1 for major broken functionality, P2 for normal bugs/features, P3 for typos/minor enhancements.
 - SIZE: XS (1-line / simple fix), S (small self-contained fix), M (standard feature/bug fix), L (multi-component change), XL (large architectural refactor).
-- RELATIONSHIPS: Only reference issue numbers from the provided Candidate Open Issues list if there is a clear, meaningful connection. If no issues apply, output 'NONE'.`;
+- DUPLICATES: Only output an issue number if you are strictly certain. False positive duplicate closures frustrate users; when in doubt, leave DUPLICATE_OF as 'NONE' and list under RELATED_ISSUES instead.
+- RELATIONSHIPS: Only reference issue numbers from the provided Candidate Issues list if there is a clear, meaningful connection. If no issues apply, output 'NONE'.`;
 var DEFAULT_MODELS = [
   process.env.GEMINI_MODEL,
   "gemini-3.1-flash-lite",
@@ -46452,21 +46456,23 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
   let estimatedPriority = null;
   let estimatedSize = null;
   let recommendedMilestone = null;
+  let duplicateOf = null;
   let relatedIssues = [];
   let blockedByIssues = [];
   let blockingIssues = [];
   let parentIssue = null;
-  const thoroughMatch = rawText.match(/===IS_THOROUGH===\s*([\s\S]*?)(?====ENHANCED_TITLE===|===ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const thoroughMatch = rawText.match(/===IS_THOROUGH===\s*([\s\S]*?)(?====ENHANCED_TITLE===|===ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
   if (thoroughMatch && thoroughMatch[1].trim()) {
     isThorough = thoroughMatch[1].trim().toUpperCase().startsWith("YES");
   }
-  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
-  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
-  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)(?====RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
-  const labelsMatch = rawText.match(/===RECOMMENDED_LABELS===\s*([\s\S]*?)(?====ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
-  const priorityMatch = rawText.match(/===ESTIMATED_PRIORITY===\s*([\s\S]*?)(?====ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
-  const sizeMatch = rawText.match(/===ESTIMATED_SIZE===\s*([\s\S]*?)(?====RECOMMENDED_MILESTONE===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
-  const milestoneMatch = rawText.match(/===RECOMMENDED_MILESTONE===\s*([\s\S]*?)(?====RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)(?====RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const labelsMatch = rawText.match(/===RECOMMENDED_LABELS===\s*([\s\S]*?)(?====ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const priorityMatch = rawText.match(/===ESTIMATED_PRIORITY===\s*([\s\S]*?)(?====ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const sizeMatch = rawText.match(/===ESTIMATED_SIZE===\s*([\s\S]*?)(?====RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const milestoneMatch = rawText.match(/===RECOMMENDED_MILESTONE===\s*([\s\S]*?)(?====DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const duplicateMatch = rawText.match(/===DUPLICATE_OF===\s*([\s\S]*?)(?====RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
   const relatedMatch = rawText.match(/===RELATED_ISSUES===\s*([\s\S]*?)(?====BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
   const blockedByMatch = rawText.match(/===BLOCKED_BY_ISSUES===\s*([\s\S]*?)(?====BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
   const blockingMatch = rawText.match(/===BLOCKING_ISSUES===\s*([\s\S]*?)(?====PARENT_ISSUE===|$)/i);
@@ -46485,6 +46491,7 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
     if (priorityMatch) cleaned = cleaned.replace(priorityMatch[0], "");
     if (sizeMatch) cleaned = cleaned.replace(sizeMatch[0], "");
     if (milestoneMatch) cleaned = cleaned.replace(milestoneMatch[0], "");
+    if (duplicateMatch) cleaned = cleaned.replace(duplicateMatch[0], "");
     if (relatedMatch) cleaned = cleaned.replace(relatedMatch[0], "");
     if (blockedByMatch) cleaned = cleaned.replace(blockedByMatch[0], "");
     if (blockingMatch) cleaned = cleaned.replace(blockingMatch[0], "");
@@ -46530,6 +46537,15 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
       recommendedMilestone = m2;
     }
   }
+  if (duplicateMatch && duplicateMatch[1].trim()) {
+    const dText = duplicateMatch[1].trim();
+    if (dText.toLowerCase() !== "none" && dText.toLowerCase() !== "n/a") {
+      const dNumMatch = dText.match(/(?:#)?(\d+)/);
+      if (dNumMatch) {
+        duplicateOf = parseInt(dNumMatch[1], 10);
+      }
+    }
+  }
   const parseIssueList = (match2) => {
     if (!match2 || !match2[1].trim()) return [];
     const text = match2[1].trim();
@@ -46563,6 +46579,7 @@ function parseGeminiResponse(rawText, enhanceTitle = false) {
     estimatedPriority,
     estimatedSize,
     recommendedMilestone,
+    duplicateOf,
     relatedIssues,
     blockedByIssues,
     blockingIssues,
@@ -46592,13 +46609,13 @@ ${customInstruction.trim()}`;
 ${availableLabels.join(", ")}` : `(No predefined labels available. If applicable, recommend standard labels like bug, documentation, enhancement, etc.)`;
   const milestonesContext = candidateMilestones.length > 0 ? `Candidate Open Milestones:
 ${candidateMilestones.join(", ")}` : `(No open milestones available)`;
-  const issuesContext = candidateIssues.length > 0 ? `Candidate Open Issues in Repository:
-${candidateIssues.map((iss) => `#${iss.number}: ${iss.title}${iss.body ? ` - ${iss.body.slice(0, 140).replace(/\r?\n/g, " ")}...` : ""}`).join("\n")}` : `(No other open issues in repository)`;
+  const issuesContext = candidateIssues.length > 0 ? `Candidate Repository Issues (open and recently closed):
+${candidateIssues.map((iss) => `#${iss.number} [${(iss.state || "open").toUpperCase()}]: ${iss.title}${iss.body ? ` - ${iss.body.slice(0, 140).replace(/\r?\n/g, " ")}...` : ""}`).join("\n")}` : `(No other issues in repository)`;
   const titleSection = enhanceTitle ? `===ENHANCED_TITLE===
 <rewritten clear, concise, and professional issue title>
 
 ` : "";
-  const prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue description for clarity and structure, provide brief fix instructions if applicable, and determine triage metadata (labels, priority, size, milestone, and issue relationships).
+  const prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue description for clarity and structure, provide brief fix instructions if applicable, and determine triage metadata (labels, priority, size, milestone, duplicate status, and issue relationships).
 
 ${labelsContext}
 ${milestonesContext}
@@ -46627,14 +46644,17 @@ ${titleSection}===ENHANCED_BODY===
 ===RECOMMENDED_MILESTONE===
 <exact name of matching milestone from Candidate Open Milestones, or 'NONE'>
 
+===DUPLICATE_OF===
+<issue number from Candidate Repository Issues if you are STRICTLY and DEFINITIVELY CERTAIN this issue is an exact duplicate of an existing open or closed issue, e.g. #12, otherwise strictly 'NONE'>
+
 ===RELATED_ISSUES===
-<comma-separated list of issue numbers from Candidate Open Issues that are related, e.g. #12, #34, or 'NONE'>
+<comma-separated list of issue numbers from Candidate Repository Issues that are related, e.g. #12, #34, or 'NONE'>
 
 ===BLOCKED_BY_ISSUES===
-<comma-separated list of issue numbers from Candidate Open Issues that block this issue, e.g. #12, or 'NONE'>
+<comma-separated list of issue numbers from Candidate Repository Issues that block this issue, e.g. #12, or 'NONE'>
 
 ===BLOCKING_ISSUES===
-<comma-separated list of issue numbers from Candidate Open Issues that are blocked by this issue, e.g. #34, or 'NONE'>
+<comma-separated list of issue numbers from Candidate Repository Issues that are blocked by this issue, e.g. #34, or 'NONE'>
 
 ===PARENT_ISSUE===
 <issue number of candidate parent/epic issue that this issue belongs to as a sub-issue, e.g. #56, or 'NONE'>
@@ -46671,6 +46691,7 @@ ${body || "(No description provided)"}`;
           estimatedPriority: parsed.estimatedPriority,
           estimatedSize: parsed.estimatedSize,
           recommendedMilestone: parsed.recommendedMilestone,
+          duplicateOf: parsed.duplicateOf,
           relatedIssues: parsed.relatedIssues,
           blockedByIssues: parsed.blockedByIssues,
           blockingIssues: parsed.blockingIssues,
@@ -50704,7 +50725,7 @@ async function fetchRepositoryMilestones({ token, repository }) {
     return [];
   }
 }
-async function fetchOpenIssues({ token, repository, excludeIssueNumber, limit = 30 }) {
+async function fetchOpenIssues({ token, repository, excludeIssueNumber, limit = 50 }) {
   if (!token || !repository) return [];
   try {
     const [owner, repo] = repository.split("/");
@@ -50712,22 +50733,23 @@ async function fetchOpenIssues({ token, repository, excludeIssueNumber, limit = 
     const { data } = await octokit.rest.issues.listForRepo({
       owner,
       repo,
-      state: "open",
+      state: "all",
       sort: "updated",
       direction: "desc",
       per_page: Math.min(limit, 100)
     });
     const currentNum = parseInt(excludeIssueNumber, 10);
-    const openIssues = data.filter((item) => !item.pull_request && item.number !== currentNum).slice(0, limit);
-    return openIssues.map((item) => ({
+    const candidateIssues = data.filter((item) => !item.pull_request && item.number !== currentNum).slice(0, limit);
+    return candidateIssues.map((item) => ({
       number: item.number,
       title: item.title,
       nodeId: item.node_id,
       body: item.body || "",
+      state: item.state || "open",
       milestone: item.milestone ? { number: item.milestone.number, title: item.milestone.title } : null
     }));
   } catch (err) {
-    console.warn(`[GitHub] Warning: Could not fetch open issues for relationship detection:`, err.message);
+    console.warn(`[GitHub] Warning: Could not fetch candidate issues for relationship/duplicate detection:`, err.message);
     return [];
   }
 }
@@ -51022,14 +51044,23 @@ async function updateGitHubIssue({
     priorityField = "Priority",
     sizeField = "Size",
     createdBranchName = null,
-    relationshipDetails = null
+    relationshipDetails = null,
+    duplicateOf = null
   } = options;
   const octokit = new Octokit2({ auth: token });
+  const isDuplicate = Boolean(duplicateOf);
   if (skipBodyUpdate) {
     console.log(`[GitHub] Issue #${num} description was evaluated as thorough. Preserving original issue body and title.`);
   } else {
     const bodyParts = [ENHANCED_MARKER];
-    if (addBadge) {
+    if (isDuplicate) {
+      bodyParts.push(
+        "> [!WARNING]",
+        `> **Duplicate Issue Detected**`,
+        `> This issue has been identified as a duplicate of #${duplicateOf} and closed automatically.`,
+        ""
+      );
+    } else if (addBadge) {
       bodyParts.push(
         "> [!NOTE]",
         "> **Issue Formatted with Gemini Flash Lite**",
@@ -51061,12 +51092,35 @@ async function updateGitHubIssue({
     if (hasTitleUpdate) {
       updatePayload.title = enhancedTitle;
     }
+    if (isDuplicate) {
+      updatePayload.state = "closed";
+      updatePayload.state_reason = "not_planned";
+    }
     console.log(`[GitHub] Updating issue #${num} in ${owner}/${repo}...`);
     await octokit.rest.issues.update(updatePayload);
-    console.log(`[GitHub] Successfully updated issue #${num} description.`);
+    console.log(`[GitHub] Successfully updated issue #${num} description${isDuplicate ? " and closed as duplicate" : ""}.`);
+  }
+  if (skipBodyUpdate && isDuplicate) {
+    console.log(`[GitHub] Closing issue #${num} as duplicate of #${duplicateOf}...`);
+    try {
+      await octokit.rest.issues.update({
+        owner,
+        repo,
+        issue_number: num,
+        state: "closed",
+        state_reason: "not_planned"
+      });
+      console.log(`[GitHub] Successfully closed issue #${num} as duplicate.`);
+    } catch (closeErr) {
+      console.warn(`[GitHub] Warning: Failed to close issue #${num}:`, closeErr.message);
+    }
+  }
+  const allLabels = [...addLabels, ...recommendedLabels];
+  if (isDuplicate && !allLabels.includes("duplicate")) {
+    allLabels.push("duplicate");
   }
   const combinedLabels = Array.from(
-    new Set([...addLabels, ...recommendedLabels].map((l) => l.trim()).filter(Boolean))
+    new Set(allLabels.map((l) => l.trim()).filter(Boolean))
   );
   if (combinedLabels.length > 0) {
     try {
@@ -51088,9 +51142,18 @@ async function updateGitHubIssue({
     const hasRelationships = Boolean(
       rel.relatedIssues && rel.relatedIssues.length > 0 || rel.blockedByIssues && rel.blockedByIssues.length > 0 || rel.blockingIssues && rel.blockingIssues.length > 0 || rel.parentIssue || rel.reusedBranchInfo
     );
-    if (hasFixInstructions || hasRelationships || createdBranchName) {
+    if (isDuplicate || hasFixInstructions || hasRelationships || createdBranchName) {
       const commentLines = [];
-      if (hasFixInstructions) {
+      if (isDuplicate) {
+        commentLines.push(
+          "> [!WARNING]",
+          "> ### \u{1F6AB} Closed as Duplicate",
+          `> This issue has been evaluated as a duplicate of #${duplicateOf} and has been closed.`,
+          `> `,
+          `> Please refer to #${duplicateOf} for ongoing discussion and progress.`
+        );
+      }
+      if (hasFixInstructions && !isDuplicate) {
         commentLines.push(
           "> [!TIP]",
           "> ### \u{1F4A1} Instructions to Fix This Issue",
@@ -51132,7 +51195,7 @@ async function updateGitHubIssue({
         );
       }
       const commentContent = commentLines.join("\n");
-      console.log(`[GitHub] Posting contributor fix instructions comment to issue #${num}...`);
+      console.log(`[GitHub] Posting ${isDuplicate ? "duplicate notification" : "contributor fix instructions"} comment to issue #${num}...`);
       await octokit.rest.issues.createComment({
         owner,
         repo,
@@ -51184,6 +51247,8 @@ function parseArgs() {
       parsed.createBranch = true;
     } else if (arg === "--project-url" && i2 + 1 < args.length) {
       parsed.projectUrl = args[++i2];
+    } else if (arg === "--no-close-duplicates") {
+      parsed.closeDuplicates = false;
     } else if (arg === "--test") {
       parsed.test = true;
     } else if (arg === "--help" || arg === "-h") {
@@ -51288,6 +51353,7 @@ Options:
   --milestone <name/num/auto>  Milestone to assign
   --create-branch              Enable development branch creation
   --project-url <url>          GitHub Project v2 URL
+  --no-close-duplicates        Disable auto-closing duplicate issues
   --test                       Run with a simulated issue
   --help, -h                   Show help information
     `);
@@ -51328,6 +51394,7 @@ Options:
       estimatedPriority,
       estimatedSize,
       recommendedMilestone,
+      duplicateOf,
       modelUsed
     } = await enhanceIssue(title, body, {
       model: config.geminiModel,
@@ -51340,6 +51407,9 @@ Options:
     console.log("             ENHANCED ISSUE              ");
     console.log("=========================================\n");
     console.log(`Evaluated Thorough: ${isThorough ? "YES (Skip body rewrite)" : "NO (Rewritten for clarity)"}`);
+    if (duplicateOf) {
+      console.log(`\u{1F6A8} DUPLICATE DETECTED: Duplicate of #${duplicateOf}`);
+    }
     if (config.enhanceTitle && enhancedTitle) {
       console.log(`Enhanced Title: ${enhancedTitle}
 `);
@@ -51360,6 +51430,7 @@ Options:
     console.log("\n=========================================");
     console.log("           AUTOMATED TRIAGE              ");
     console.log("=========================================");
+    console.log(`Duplicate Of:       ${duplicateOf ? `#${duplicateOf}` : "None"}`);
     console.log(`Recommended Labels: ${recommendedLabels.length > 0 ? recommendedLabels.join(", ") : "None"}`);
     console.log(`Estimated Priority: ${estimatedPriority || "Unspecified"}`);
     console.log(`Estimated Size:     ${estimatedSize || "Unspecified"}`);
@@ -51368,7 +51439,10 @@ Options:
       console.log("\n=========================================");
       console.log("     CONTRIBUTOR FIX INSTRUCTIONS        ");
       console.log("=========================================\n");
-      if (fixInstructions) {
+      if (duplicateOf) {
+        console.log(`> [!WARNING]
+> Marked as duplicate of #${duplicateOf} and closed.`);
+      } else if (fixInstructions) {
         console.log("> [!TIP]");
         console.log("> ### \u{1F4A1} Instructions to Fix This Issue");
         console.log("> Here are brief instructions to help anyone interested in resolving this issue:\n");
@@ -51528,6 +51602,7 @@ async function runGitHubAction() {
     estimatedPriority,
     estimatedSize,
     recommendedMilestone,
+    duplicateOf = null,
     relatedIssues = [],
     blockedByIssues = [],
     blockingIssues = [],
@@ -51542,13 +51617,17 @@ async function runGitHubAction() {
     candidateMilestones: candidateMilestones.map((m2) => m2.title),
     candidateIssues
   });
+  const isDuplicate = Boolean(duplicateOf && config.closeDuplicates);
+  if (isDuplicate) {
+    console.log(`[GitHub Action] Issue #${issueNumber} evaluated as DUPLICATE of #${duplicateOf}.`);
+  }
   const skipBodyUpdate = Boolean(isThorough && !forceEnhance);
   if (skipBodyUpdate) {
     console.log(
       `[GitHub Action] Issue #${issueNumber} was evaluated as thorough on its own. Preserving original body/title, updating triage attributes.`
     );
   }
-  if (config.linkSubIssues && parentIssue && issueNodeId) {
+  if (!isDuplicate && config.linkSubIssues && parentIssue && issueNodeId) {
     const parentCandidate = candidateIssues.find((iss) => iss.number === parentIssue);
     if (parentCandidate && parentCandidate.nodeId) {
       console.log(`[GitHub Action] Linking issue #${issueNumber} as sub-issue of #${parentIssue}...`);
@@ -51559,7 +51638,7 @@ async function runGitHubAction() {
       });
     }
   }
-  if (config.linkDependencies && issueNodeId) {
+  if (!isDuplicate && config.linkDependencies && issueNodeId) {
     for (const blockedByNum of blockedByIssues) {
       const blockingCandidate = candidateIssues.find((iss) => iss.number === blockedByNum);
       if (blockingCandidate && blockingCandidate.nodeId) {
@@ -51583,13 +51662,13 @@ async function runGitHubAction() {
       }
     }
   }
-  const resolvedAssignees = resolveAssignees({
+  const resolvedAssignees = !isDuplicate ? resolveAssignees({
     repository,
     config,
     labels: [...labels, ...recommendedLabels],
     title,
     body
-  });
+  }) : [];
   if (resolvedAssignees.length > 0) {
     await assignUsersToIssue({
       token: githubToken,
@@ -51598,11 +51677,11 @@ async function runGitHubAction() {
       assignees: resolvedAssignees
     });
   }
-  const resolvedMilestoneNumber = resolveMilestone({
+  const resolvedMilestoneNumber = !isDuplicate ? resolveMilestone({
     config,
     candidateMilestones,
     recommendedMilestone
-  });
+  }) : null;
   if (resolvedMilestoneNumber) {
     await setIssueMilestone({
       token: githubToken,
@@ -51613,7 +51692,7 @@ async function runGitHubAction() {
   }
   let createdBranchName = null;
   let reusedBranchInfo = null;
-  if (config.createBranch) {
+  if (!isDuplicate && config.createBranch) {
     const candidateWorkIssues = Array.from(
       new Set([parentIssue, ...blockedByIssues, ...blockingIssues, ...relatedIssues].filter(Boolean))
     );
@@ -51674,10 +51753,11 @@ async function runGitHubAction() {
       recommendedLabels,
       skipBodyUpdate,
       createdBranchName,
-      relationshipDetails
+      relationshipDetails,
+      duplicateOf: isDuplicate ? duplicateOf : null
     }
   });
-  if ((config.projectUrl || config.projectNumber) && issueNodeId) {
+  if (!isDuplicate && (config.projectUrl || config.projectNumber) && issueNodeId) {
     await assignIssueToProject({
       token: config.projectToken || githubToken,
       issueNodeId,

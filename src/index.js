@@ -56,6 +56,8 @@ function parseArgs() {
       parsed.createBranch = true;
     } else if (arg === "--project-url" && i + 1 < args.length) {
       parsed.projectUrl = args[++i];
+    } else if (arg === "--no-close-duplicates") {
+      parsed.closeDuplicates = false;
     } else if (arg === "--test") {
       parsed.test = true;
     } else if (arg === "--help" || arg === "-h") {
@@ -181,6 +183,7 @@ Options:
   --milestone <name/num/auto>  Milestone to assign
   --create-branch              Enable development branch creation
   --project-url <url>          GitHub Project v2 URL
+  --no-close-duplicates        Disable auto-closing duplicate issues
   --test                       Run with a simulated issue
   --help, -h                   Show help information
     `);
@@ -228,6 +231,7 @@ Options:
       estimatedPriority,
       estimatedSize,
       recommendedMilestone,
+      duplicateOf,
       modelUsed
     } = await enhanceIssue(title, body, {
       model: config.geminiModel,
@@ -241,6 +245,9 @@ Options:
     console.log("             ENHANCED ISSUE              ");
     console.log("=========================================\n");
     console.log(`Evaluated Thorough: ${isThorough ? "YES (Skip body rewrite)" : "NO (Rewritten for clarity)"}`);
+    if (duplicateOf) {
+      console.log(`🚨 DUPLICATE DETECTED: Duplicate of #${duplicateOf}`);
+    }
     if (config.enhanceTitle && enhancedTitle) {
       console.log(`Enhanced Title: ${enhancedTitle}\n`);
     }
@@ -264,6 +271,7 @@ Options:
     console.log("\n=========================================");
     console.log("           AUTOMATED TRIAGE              ");
     console.log("=========================================");
+    console.log(`Duplicate Of:       ${duplicateOf ? `#${duplicateOf}` : "None"}`);
     console.log(`Recommended Labels: ${recommendedLabels.length > 0 ? recommendedLabels.join(", ") : "None"}`);
     console.log(`Estimated Priority: ${estimatedPriority || "Unspecified"}`);
     console.log(`Estimated Size:     ${estimatedSize || "Unspecified"}`);
@@ -273,7 +281,9 @@ Options:
       console.log("\n=========================================");
       console.log("     CONTRIBUTOR FIX INSTRUCTIONS        ");
       console.log("=========================================\n");
-      if (fixInstructions) {
+      if (duplicateOf) {
+        console.log(`> [!WARNING]\n> Marked as duplicate of #${duplicateOf} and closed.`);
+      } else if (fixInstructions) {
         console.log("> [!TIP]");
         console.log("> ### 💡 Instructions to Fix This Issue");
         console.log("> Here are brief instructions to help anyone interested in resolving this issue:\n");
@@ -465,6 +475,7 @@ async function runGitHubAction() {
     estimatedPriority,
     estimatedSize,
     recommendedMilestone,
+    duplicateOf = null,
     relatedIssues = [],
     blockedByIssues = [],
     blockingIssues = [],
@@ -480,6 +491,11 @@ async function runGitHubAction() {
     candidateIssues
   });
 
+  const isDuplicate = Boolean(duplicateOf && config.closeDuplicates);
+  if (isDuplicate) {
+    console.log(`[GitHub Action] Issue #${issueNumber} evaluated as DUPLICATE of #${duplicateOf}.`);
+  }
+
   const skipBodyUpdate = Boolean(isThorough && !forceEnhance);
   if (skipBodyUpdate) {
     console.log(
@@ -487,8 +503,8 @@ async function runGitHubAction() {
     );
   }
 
-  // Link Sub-Issue / Parent Issue via GraphQL if enabled
-  if (config.linkSubIssues && parentIssue && issueNodeId) {
+  // Link Sub-Issue / Parent Issue via GraphQL if enabled (skip for duplicates)
+  if (!isDuplicate && config.linkSubIssues && parentIssue && issueNodeId) {
     const parentCandidate = candidateIssues.find((iss) => iss.number === parentIssue);
     if (parentCandidate && parentCandidate.nodeId) {
       console.log(`[GitHub Action] Linking issue #${issueNumber} as sub-issue of #${parentIssue}...`);
@@ -500,8 +516,8 @@ async function runGitHubAction() {
     }
   }
 
-  // Link Blocked By Dependencies via GraphQL if enabled
-  if (config.linkDependencies && issueNodeId) {
+  // Link Blocked By Dependencies via GraphQL if enabled (skip for duplicates)
+  if (!isDuplicate && config.linkDependencies && issueNodeId) {
     for (const blockedByNum of blockedByIssues) {
       const blockingCandidate = candidateIssues.find((iss) => iss.number === blockedByNum);
       if (blockingCandidate && blockingCandidate.nodeId) {
@@ -527,14 +543,14 @@ async function runGitHubAction() {
     }
   }
 
-  // Automated Assignment (if enabled or configured)
-  const resolvedAssignees = resolveAssignees({
+  // Automated Assignment (if enabled or configured) (skip for duplicates)
+  const resolvedAssignees = !isDuplicate ? resolveAssignees({
     repository,
     config,
     labels: [...labels, ...recommendedLabels],
     title,
     body
-  });
+  }) : [];
 
   if (resolvedAssignees.length > 0) {
     await assignUsersToIssue({
@@ -545,12 +561,12 @@ async function runGitHubAction() {
     });
   }
 
-  // Milestone Association (if enabled or configured)
-  const resolvedMilestoneNumber = resolveMilestone({
+  // Milestone Association (if enabled or configured) (skip for duplicates)
+  const resolvedMilestoneNumber = !isDuplicate ? resolveMilestone({
     config,
     candidateMilestones,
     recommendedMilestone
-  });
+  }) : null;
 
   if (resolvedMilestoneNumber) {
     await setIssueMilestone({
@@ -561,11 +577,11 @@ async function runGitHubAction() {
     });
   }
 
-  // Development Branch Creation & Linking (or Reusing Existing Branch/PR from Related Issues)
+  // Development Branch Creation & Linking (skip for duplicates)
   let createdBranchName = null;
   let reusedBranchInfo = null;
 
-  if (config.createBranch) {
+  if (!isDuplicate && config.createBranch) {
     // Check if any related, parent, or blocking issues already have a PR or branch
     const candidateWorkIssues = Array.from(
       new Set([parentIssue, ...blockedByIssues, ...blockingIssues, ...relatedIssues].filter(Boolean))
@@ -633,12 +649,13 @@ async function runGitHubAction() {
       recommendedLabels,
       skipBodyUpdate,
       createdBranchName,
-      relationshipDetails
+      relationshipDetails,
+      duplicateOf: isDuplicate ? duplicateOf : null
     }
   });
 
-  // GitHub Project v2 Assignment & Attributes (if configured)
-  if ((config.projectUrl || config.projectNumber) && issueNodeId) {
+  // GitHub Project v2 Assignment & Attributes (if configured) (skip for duplicates)
+  if (!isDuplicate && (config.projectUrl || config.projectNumber) && issueNodeId) {
     await assignIssueToProject({
       token: config.projectToken || githubToken,
       issueNodeId,
