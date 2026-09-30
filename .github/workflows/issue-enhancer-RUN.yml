@@ -1,0 +1,90 @@
+name: Enhance GitHub Issue
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+  contents: write
+  repository-projects: write
+
+jobs:
+  enhance-issue:
+    name: Reword and Format Issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enhance Issue with Gemini Flash Lite
+        uses: JustJade2007/github-issue-enhancer@main
+        with:
+          # =========================================================================
+          # Centralized Workflow Settings
+          # =========================================================================
+
+          # --- Required Authentication ---
+          # Google Gemini API key
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          # Default GitHub workflow token with repository issues/contents permissions
+          github-token: ${{ github.token }}
+
+          # --- Model & Generation Settings ---
+          # Specify Gemini model (default: gemini-3.1-flash-lite)
+          gemini-model: 'gemini-3.1-flash-lite'
+          # Sampling temperature (0.0 to 1.0, lower = more deterministic, default: 0.2)
+          temperature: '0.2'
+          # Optional custom instructions or domain-specific guidelines
+          custom-instruction: ''
+
+          # --- Feature Toggles ---
+          # Post brief contributor instructions on how to fix the issue (only posted if applicable)
+          post-comment: 'true'
+          # Include original issue submission in an expandable <details> section
+          preserve-original: 'true'
+          # Prepend [!NOTE] header badge in the enhanced issue description
+          add-badge: 'true'
+          # Clarify and reword issue title in addition to body (default: false)
+          enhance-title: 'true'
+
+          # --- Automation & Filtering ---
+          # Comma-separated labels to automatically apply to enhanced issues (e.g. 'enhanced')
+          add-labels: ''
+          # Comma-separated list of authors/bots to ignore (e.g. 'dependabot[bot],renovate[bot]')
+          ignore-authors: 'dependabot[bot],renovate[bot]'
+          # Comma-separated list of labels that skip enhancement if already present
+          ignore-labels: 'no-enhance'
+
+          # --- Triage, Assignment, Milestones & Branches ---
+          # Automatically assign repository owner or designated assignees (default: false)
+          auto-assign: 'true'
+          # Comma-separated GitHub usernames to assign (optional)
+          assignees: ''
+          # Milestone to associate (e.g. 'v1.0.0' or 'auto' for Gemini auto-selection)
+          milestone: ''
+          # Automatically create and link a development branch for this issue (default: false)
+          create-branch: 'false'
+          # Branch prefix for development branch creation (default: 'issue-')
+          branch-prefix: 'issue-'
+          # Detect and cross-reference related issues (default: true)
+          link-related: 'true'
+          # Detect and link blocking / blocked-by dependencies (default: true)
+          link-dependencies: 'true'
+          # Detect and link parent / sub-issues (default: true)
+          link-sub-issues: 'true'
+          # Apply duplicate label and close as duplicate when certain (default: true)
+          close-duplicates: 'true'
+
+          # --- GitHub Projects v2 Management ---
+          # Project URL (e.g. 'https://github.com/orgs/my-org/projects/1' or 'https://github.com/users/my-user/projects/1')
+          project-url: 'https://github.com/users/JustJade2007/projects/2/'
+          # Optional token for projects (use GH_PAT or PROJECT_TOKEN secret; defaults to github.token)
+          project-token: ${{ secrets.GH_PAT || secrets.PROJECT_TOKEN || secrets.PAT_TOKEN || github.token }}
+          # Field name for Priority in project (default: 'Priority')
+          project-priority-field: 'Priority'
+          # Field name for Size in project (default: 'Size')
+          project-size-field: 'Size'
+          # Field name for Status in project (default: 'Status')
+          project-status-field: 'Status'
+          # Initial status for newly assigned issues (default: 'Backlog')
+          project-initial-status: 'Backlog'
