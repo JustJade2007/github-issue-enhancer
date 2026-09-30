@@ -1,5 +1,5 @@
 name: 'GitHub Issue Enhancer'
-description: 'Rewords and formats GitHub issues using Gemini Flash Lite, automates user assignment, dynamic labeling, milestone & branch linking, and GitHub Projects v2 organization.'
+description: 'Rewords and formats GitHub issues with Gemini, automates assignees, labels, milestones, branches, and Projects v2.'
 author: 'JustJade2007'
 branding:
   icon: 'alert-circle'
