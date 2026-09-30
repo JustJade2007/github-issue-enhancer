@@ -76,3 +76,12 @@ jobs:
           project-url: ''
           # Optional token for projects (use GH_PAT or PROJECT_TOKEN secret; defaults to github.token)
           project-token: ${{ secrets.GH_PAT || secrets.PROJECT_TOKEN || secrets.PAT_TOKEN || github.token }}
+          # Field name for Priority in project (default: 'Priority')
+          project-priority-field: 'Priority'
+          # Field name for Size in project (default: 'Size')
+          project-size-field: 'Size'
+          # Field name for Status in project (default: 'Status')
+          project-status-field: 'Status'
+          # Initial status for newly assigned issues (default: 'Backlog')
+          project-initial-status: 'Backlog'
+

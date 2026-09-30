@@ -60,6 +60,22 @@ inputs:
     description: 'Token with project:write permission (defaults to github-token)'
     required: false
     default: ''
+  project-priority-field:
+    description: 'Field name for priority in GitHub Project (default: "Priority")'
+    required: false
+    default: 'Priority'
+  project-size-field:
+    description: 'Field name for size in GitHub Project (default: "Size")'
+    required: false
+    default: 'Size'
+  project-status-field:
+    description: 'Field name for status in GitHub Project (default: "Status")'
+    required: false
+    default: 'Status'
+  project-initial-status:
+    description: 'Initial status option to assign to newly added issues (default: "Backlog")'
+    required: false
+    default: 'Backlog'
   auto-assign:
     description: 'Whether to automatically assign repository owner or designated assignees (true/false)'
     required: false
@@ -129,6 +145,10 @@ runs:
         IGNORE_LABELS: ${{ inputs.ignore-labels }}
         PROJECT_URL: ${{ inputs.project-url }}
         PROJECT_TOKEN: ${{ inputs.project-token }}
+        PROJECT_PRIORITY_FIELD: ${{ inputs.project-priority-field }}
+        PROJECT_SIZE_FIELD: ${{ inputs.project-size-field }}
+        PROJECT_STATUS_FIELD: ${{ inputs.project-status-field }}
+        PROJECT_INITIAL_STATUS: ${{ inputs.project-initial-status }}
         AUTO_ASSIGN: ${{ inputs.auto-assign }}
         ASSIGNEES: ${{ inputs.assignees }}
         MILESTONE: ${{ inputs.milestone }}

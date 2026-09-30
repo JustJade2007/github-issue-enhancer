@@ -150,6 +150,10 @@ The table below outlines all available settings under `with:`:
 | `ignore-labels` | string | `''` | Comma-separated list of labels that skip enhancement if present on the issue (e.g. `no-enhance, manual`). |
 | `project-url` | string | `''` | URL of the GitHub Project v2 (e.g. `https://github.com/orgs/my-org/projects/1` or `https://github.com/users/my-user/projects/2`). |
 | `project-token` | string | `${{ github.token }}` | PAT or GitHub App token with `project:write` permission to add issues to Projects v2. |
+| `project-priority-field` | string | `'Priority'` | Custom field name for Priority on the project. |
+| `project-size-field` | string | `'Size'` | Custom field name for Size / Estimate on the project. |
+| `project-status-field` | string | `'Status'` | Custom field name for Status on the project. |
+| `project-initial-status` | string | `'Backlog'` | Initial status option to assign to newly added issues (e.g. `Backlog`, `Todo`). |
 | `auto-assign` | boolean / string | `'false'` | Whether to automatically assign the repository owner or default assignees when enabled. |
 | `assignees` | string | `''` | Comma-separated GitHub usernames to assign to newly enhanced issues. |
 | `milestone` | string | `''` | Milestone title/number to associate, or `'auto'` to let Gemini select from open repository milestones. |

@@ -181,18 +181,40 @@ export function matchSelectOption(options, targetValue) {
   if (!Array.isArray(options) || !targetValue) return null;
   const target = targetValue.trim().toLowerCase();
 
-  // 1. Exact match
+  // 1. Exact match (case-insensitive)
   const exact = options.find((o) => o.name.toLowerCase() === target);
   if (exact) return exact.id;
 
-  // 2. Starts with / prefix match (e.g. "P0" in "P0 - Critical")
+  // 2. Starts with / prefix match (e.g. "P0" in "P0 - Critical" or "Backlog" in "Backlog / Inbox")
   const prefixMatch = options.find((o) => {
     const optLower = o.name.toLowerCase();
     return optLower.startsWith(target) || target.startsWith(optLower);
   });
   if (prefixMatch) return prefixMatch.id;
 
-  // 3. Bidirectional priority alias groups
+  // 3. Status alias groups
+  const statusGroups = [
+    ["backlog", "inbox", "to do", "todo", "new", "triage", "open"],
+    ["ready", "ready for dev", "next up"],
+    ["in progress", "active", "doing", "started"],
+    ["in review", "review", "pr", "testing"],
+    ["done", "closed", "complete", "finished"]
+  ];
+
+  const matchedStatusGroup = statusGroups.find((grp) =>
+    grp.some((term) => target === term || target.includes(term) || term.includes(target))
+  );
+  if (matchedStatusGroup) {
+    const statusMatch = options.find((o) => {
+      const optLower = o.name.toLowerCase();
+      return matchedStatusGroup.some(
+        (term) => optLower === term || optLower.includes(term) || term.includes(optLower)
+      );
+    });
+    if (statusMatch) return statusMatch.id;
+  }
+
+  // 4. Bidirectional priority alias groups
   const priorityGroups = [
     ["p0", "critical", "urgent", "highest", "blocker"],
     ["p1", "high", "important"],
@@ -211,9 +233,9 @@ export function matchSelectOption(options, targetValue) {
     if (groupMatch) return groupMatch.id;
   }
 
-  // 4. Size alias groups
+  // 5. Size alias groups
   const sizeGroups = [
-    ["xs", "tiny", "trivial"],
+    ["xs", "tiny", "trivial", "extra small"],
     ["s", "small"],
     ["m", "medium", "standard"],
     ["l", "large"],
@@ -235,7 +257,33 @@ export function matchSelectOption(options, targetValue) {
 }
 
 /**
- * Assigns a GitHub issue to a Project V2 and sets priority & size attributes.
+ * Finds a field in the project by name, checking exact match first, then alternative aliases.
+ * @param {Array<{ id: string, name: string, dataType: string, options?: Array<{ id: string, name: string }> }>} fields
+ * @param {string} targetName
+ * @param {string[]} [aliases=[]]
+ * @returns {object|null}
+ */
+export function findProjectField(fields, targetName, aliases = []) {
+  if (!Array.isArray(fields) || !targetName) return null;
+  const targetLower = targetName.trim().toLowerCase();
+
+  // Exact match
+  const exact = fields.find((f) => f.name.toLowerCase() === targetLower);
+  if (exact) return exact;
+
+  // Check aliases
+  for (const alias of aliases) {
+    const aLower = alias.toLowerCase();
+    const aliasMatch = fields.find((f) => f.name.toLowerCase() === aLower);
+    if (aliasMatch) return aliasMatch;
+  }
+
+  // Loose includes match
+  return fields.find((f) => f.name.toLowerCase().includes(targetLower)) || null;
+}
+
+/**
+ * Assigns a GitHub issue to a Project V2 and sets status, priority & size attributes.
  * @param {object} params
  * @param {string} params.token - GitHub / Project Personal Access Token
  * @param {string} params.issueNodeId - GraphQL node ID of the issue
@@ -244,6 +292,8 @@ export function matchSelectOption(options, targetValue) {
  * @param {string} [params.projectUrl] - URL of the GitHub project
  * @param {string|number} [params.projectNumber] - Project number
  * @param {string} [params.projectOwner] - Project owner (org or user)
+ * @param {string} [params.status="Backlog"] - Initial project status (e.g. 'Backlog', 'Todo')
+ * @param {string} [params.statusFieldName="Status"] - Custom field name for status
  * @param {string} [params.priority] - Estimated priority (P0, P1, P2, P3, etc.)
  * @param {string} [params.size] - Estimated size (XS, S, M, L, XL, etc.)
  * @param {string} [params.priorityFieldName="Priority"] - Custom field name for priority
@@ -258,6 +308,8 @@ export async function assignIssueToProject({
   projectUrl,
   projectNumber,
   projectOwner,
+  status = "Backlog",
+  statusFieldName = "Status",
   priority,
   size,
   priorityFieldName = "Priority",
@@ -288,6 +340,15 @@ export async function assignIssueToProject({
     console.log(`[Project] Locating GitHub Project #${projectIdent.number} (${projectIdent.owner})...`);
     const projectDetails = await getProjectV2Details(octokit, projectIdent);
     console.log(`[Project] Found project "${projectDetails.title}" (ID: ${projectDetails.id}).`);
+
+    // Log available project fields for easy troubleshooting
+    const availableFieldSummaries = projectDetails.fields.map((f) => {
+      if (f.dataType === "SINGLE_SELECT" && f.options) {
+        return `${f.name} [${f.dataType}: ${f.options.map((o) => o.name).join(", ")}]`;
+      }
+      return `${f.name} [${f.dataType}]`;
+    });
+    console.log(`[Project] Available project fields: ${availableFieldSummaries.join(" | ")}`);
 
     let itemId = null;
 
@@ -357,24 +418,58 @@ export async function assignIssueToProject({
       }
     `;
 
-    // Update Priority if specified
+    // 1. Update Status (default: "Backlog")
+    const targetStatus = status || "Backlog";
+    const statusField = findProjectField(projectDetails.fields, statusFieldName, ["Status", "State"]);
+    if (statusField) {
+      if (statusField.dataType === "SINGLE_SELECT" && statusField.options) {
+        const optionId = matchSelectOption(statusField.options, targetStatus);
+        if (optionId) {
+          const matchedOpt = statusField.options.find((o) => o.id === optionId);
+          await octokit.graphql(updateFieldMutation, {
+            projectId: projectDetails.id,
+            itemId,
+            fieldId: statusField.id,
+            value: { singleSelectOptionId: optionId }
+          });
+          console.log(`[Project] Set ${statusField.name} to "${matchedOpt?.name || targetStatus}".`);
+        } else {
+          console.log(
+            `[Project] Status "${targetStatus}" did not match available options for ${statusField.name} (${statusField.options.map((o) => o.name).join(", ")}).`
+          );
+        }
+      } else if (statusField.dataType === "TEXT") {
+        await octokit.graphql(updateFieldMutation, {
+          projectId: projectDetails.id,
+          itemId,
+          fieldId: statusField.id,
+          value: { text: targetStatus }
+        });
+        console.log(`[Project] Set ${statusField.name} text to "${targetStatus}".`);
+      }
+    } else {
+      console.log(`[Project] Field "${statusFieldName}" not found on project. Skipping status attribute.`);
+    }
+
+    // 2. Update Priority (if estimated or specified)
     if (priority) {
-      const pField = projectDetails.fields.find(
-        (f) => f.name.toLowerCase() === priorityFieldName.toLowerCase()
-      );
+      const pField = findProjectField(projectDetails.fields, priorityFieldName, ["Priority", "Severity", "Urgency"]);
       if (pField) {
         if (pField.dataType === "SINGLE_SELECT" && pField.options) {
           const optionId = matchSelectOption(pField.options, priority);
           if (optionId) {
+            const matchedOpt = pField.options.find((o) => o.id === optionId);
             await octokit.graphql(updateFieldMutation, {
               projectId: projectDetails.id,
               itemId,
               fieldId: pField.id,
               value: { singleSelectOptionId: optionId }
             });
-            console.log(`[Project] Set ${pField.name} to "${priority}".`);
+            console.log(`[Project] Set ${pField.name} to "${matchedOpt?.name || priority}".`);
           } else {
-            console.log(`[Project] Option "${priority}" did not match available ${pField.name} options.`);
+            console.log(
+              `[Project] Option "${priority}" did not match available ${pField.name} options (${pField.options.map((o) => o.name).join(", ")}).`
+            );
           }
         } else if (pField.dataType === "TEXT") {
           await octokit.graphql(updateFieldMutation, {
@@ -388,26 +483,29 @@ export async function assignIssueToProject({
       } else {
         console.log(`[Project] Field "${priorityFieldName}" not found on project. Skipping priority attribute.`);
       }
+    } else {
+      console.log(`[Project] No estimated priority provided. Skipping priority attribute.`);
     }
 
-    // Update Size if specified
+    // 3. Update Size (if estimated or specified)
     if (size) {
-      const sField = projectDetails.fields.find(
-        (f) => f.name.toLowerCase() === sizeFieldName.toLowerCase()
-      );
+      const sField = findProjectField(projectDetails.fields, sizeFieldName, ["Size", "Estimate", "Estimation", "Complexity"]);
       if (sField) {
         if (sField.dataType === "SINGLE_SELECT" && sField.options) {
           const optionId = matchSelectOption(sField.options, size);
           if (optionId) {
+            const matchedOpt = sField.options.find((o) => o.id === optionId);
             await octokit.graphql(updateFieldMutation, {
               projectId: projectDetails.id,
               itemId,
               fieldId: sField.id,
               value: { singleSelectOptionId: optionId }
             });
-            console.log(`[Project] Set ${sField.name} to "${size}".`);
+            console.log(`[Project] Set ${sField.name} to "${matchedOpt?.name || size}".`);
           } else {
-            console.log(`[Project] Option "${size}" did not match available ${sField.name} options.`);
+            console.log(
+              `[Project] Option "${size}" did not match available ${sField.name} options (${sField.options.map((o) => o.name).join(", ")}).`
+            );
           }
         } else if (sField.dataType === "TEXT") {
           await octokit.graphql(updateFieldMutation, {
@@ -421,6 +519,8 @@ export async function assignIssueToProject({
       } else {
         console.log(`[Project] Field "${sizeFieldName}" not found on project. Skipping size attribute.`);
       }
+    } else {
+      console.log(`[Project] No estimated size provided. Skipping size attribute.`);
     }
 
     return { itemId };

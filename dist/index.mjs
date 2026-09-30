@@ -22921,6 +22921,8 @@ var DEFAULT_CONFIG = {
   projectOwner: "",
   priorityField: "Priority",
   sizeField: "Size",
+  statusField: "Status",
+  initialStatus: "Backlog",
   autoAssign: false,
   assignees: [],
   assignmentRules: [],
@@ -22981,6 +22983,8 @@ function loadConfig(overrides = {}) {
     projectOwner: overrides.projectOwner || env2.PROJECT_OWNER || fileConfig.project?.owner || DEFAULT_CONFIG.projectOwner,
     priorityField: overrides.priorityField || env2.PROJECT_PRIORITY_FIELD || fileConfig.project?.priorityField || DEFAULT_CONFIG.priorityField,
     sizeField: overrides.sizeField || env2.PROJECT_SIZE_FIELD || fileConfig.project?.sizeField || DEFAULT_CONFIG.sizeField,
+    statusField: overrides.statusField || env2.PROJECT_STATUS_FIELD || env2.STATUS_FIELD || fileConfig.project?.statusField || DEFAULT_CONFIG.statusField,
+    initialStatus: overrides.initialStatus !== void 0 ? overrides.initialStatus : env2.PROJECT_INITIAL_STATUS !== void 0 ? env2.PROJECT_INITIAL_STATUS : env2.INITIAL_STATUS !== void 0 ? env2.INITIAL_STATUS : fileConfig.project?.initialStatus !== void 0 ? fileConfig.project.initialStatus : DEFAULT_CONFIG.initialStatus,
     // Automated Triage & Assignment
     autoAssign: overrides.autoAssign !== void 0 ? parseBoolean(overrides.autoAssign, DEFAULT_CONFIG.autoAssign) : env2.AUTO_ASSIGN !== void 0 ? parseBoolean(env2.AUTO_ASSIGN, DEFAULT_CONFIG.autoAssign) : fileConfig.triage?.autoAssign !== void 0 ? parseBoolean(fileConfig.triage.autoAssign, DEFAULT_CONFIG.autoAssign) : DEFAULT_CONFIG.autoAssign,
     assignees: overrides.assignees !== void 0 ? parseList(overrides.assignees) : env2.ASSIGNEES !== void 0 ? parseList(env2.ASSIGNEES) : fileConfig.triage?.assignees !== void 0 ? parseList(fileConfig.triage.assignees) : DEFAULT_CONFIG.assignees,
@@ -50370,6 +50374,25 @@ function matchSelectOption(options, targetValue) {
     return optLower.startsWith(target) || target.startsWith(optLower);
   });
   if (prefixMatch) return prefixMatch.id;
+  const statusGroups = [
+    ["backlog", "inbox", "to do", "todo", "new", "triage", "open"],
+    ["ready", "ready for dev", "next up"],
+    ["in progress", "active", "doing", "started"],
+    ["in review", "review", "pr", "testing"],
+    ["done", "closed", "complete", "finished"]
+  ];
+  const matchedStatusGroup = statusGroups.find(
+    (grp) => grp.some((term) => target === term || target.includes(term) || term.includes(target))
+  );
+  if (matchedStatusGroup) {
+    const statusMatch = options.find((o) => {
+      const optLower = o.name.toLowerCase();
+      return matchedStatusGroup.some(
+        (term) => optLower === term || optLower.includes(term) || term.includes(optLower)
+      );
+    });
+    if (statusMatch) return statusMatch.id;
+  }
   const priorityGroups = [
     ["p0", "critical", "urgent", "highest", "blocker"],
     ["p1", "high", "important"],
@@ -50387,7 +50410,7 @@ function matchSelectOption(options, targetValue) {
     if (groupMatch) return groupMatch.id;
   }
   const sizeGroups = [
-    ["xs", "tiny", "trivial"],
+    ["xs", "tiny", "trivial", "extra small"],
     ["s", "small"],
     ["m", "medium", "standard"],
     ["l", "large"],
@@ -50405,6 +50428,18 @@ function matchSelectOption(options, targetValue) {
   }
   return null;
 }
+function findProjectField(fields, targetName, aliases = []) {
+  if (!Array.isArray(fields) || !targetName) return null;
+  const targetLower = targetName.trim().toLowerCase();
+  const exact = fields.find((f3) => f3.name.toLowerCase() === targetLower);
+  if (exact) return exact;
+  for (const alias of aliases) {
+    const aLower = alias.toLowerCase();
+    const aliasMatch = fields.find((f3) => f3.name.toLowerCase() === aLower);
+    if (aliasMatch) return aliasMatch;
+  }
+  return fields.find((f3) => f3.name.toLowerCase().includes(targetLower)) || null;
+}
 async function assignIssueToProject({
   token,
   issueNodeId,
@@ -50413,6 +50448,8 @@ async function assignIssueToProject({
   projectUrl,
   projectNumber,
   projectOwner,
+  status = "Backlog",
+  statusFieldName = "Status",
   priority,
   size,
   priorityFieldName = "Priority",
@@ -50439,6 +50476,13 @@ async function assignIssueToProject({
     console.log(`[Project] Locating GitHub Project #${projectIdent.number} (${projectIdent.owner})...`);
     const projectDetails = await getProjectV2Details(octokit, projectIdent);
     console.log(`[Project] Found project "${projectDetails.title}" (ID: ${projectDetails.id}).`);
+    const availableFieldSummaries = projectDetails.fields.map((f3) => {
+      if (f3.dataType === "SINGLE_SELECT" && f3.options) {
+        return `${f3.name} [${f3.dataType}: ${f3.options.map((o) => o.name).join(", ")}]`;
+      }
+      return `${f3.name} [${f3.dataType}]`;
+    });
+    console.log(`[Project] Available project fields: ${availableFieldSummaries.join(" | ")}`);
     let itemId = null;
     if (repository && issueNumber) {
       try {
@@ -50498,23 +50542,55 @@ async function assignIssueToProject({
         }
       }
     `;
+    const targetStatus = status || "Backlog";
+    const statusField = findProjectField(projectDetails.fields, statusFieldName, ["Status", "State"]);
+    if (statusField) {
+      if (statusField.dataType === "SINGLE_SELECT" && statusField.options) {
+        const optionId = matchSelectOption(statusField.options, targetStatus);
+        if (optionId) {
+          const matchedOpt = statusField.options.find((o) => o.id === optionId);
+          await octokit.graphql(updateFieldMutation, {
+            projectId: projectDetails.id,
+            itemId,
+            fieldId: statusField.id,
+            value: { singleSelectOptionId: optionId }
+          });
+          console.log(`[Project] Set ${statusField.name} to "${matchedOpt?.name || targetStatus}".`);
+        } else {
+          console.log(
+            `[Project] Status "${targetStatus}" did not match available options for ${statusField.name} (${statusField.options.map((o) => o.name).join(", ")}).`
+          );
+        }
+      } else if (statusField.dataType === "TEXT") {
+        await octokit.graphql(updateFieldMutation, {
+          projectId: projectDetails.id,
+          itemId,
+          fieldId: statusField.id,
+          value: { text: targetStatus }
+        });
+        console.log(`[Project] Set ${statusField.name} text to "${targetStatus}".`);
+      }
+    } else {
+      console.log(`[Project] Field "${statusFieldName}" not found on project. Skipping status attribute.`);
+    }
     if (priority) {
-      const pField = projectDetails.fields.find(
-        (f3) => f3.name.toLowerCase() === priorityFieldName.toLowerCase()
-      );
+      const pField = findProjectField(projectDetails.fields, priorityFieldName, ["Priority", "Severity", "Urgency"]);
       if (pField) {
         if (pField.dataType === "SINGLE_SELECT" && pField.options) {
           const optionId = matchSelectOption(pField.options, priority);
           if (optionId) {
+            const matchedOpt = pField.options.find((o) => o.id === optionId);
             await octokit.graphql(updateFieldMutation, {
               projectId: projectDetails.id,
               itemId,
               fieldId: pField.id,
               value: { singleSelectOptionId: optionId }
             });
-            console.log(`[Project] Set ${pField.name} to "${priority}".`);
+            console.log(`[Project] Set ${pField.name} to "${matchedOpt?.name || priority}".`);
           } else {
-            console.log(`[Project] Option "${priority}" did not match available ${pField.name} options.`);
+            console.log(
+              `[Project] Option "${priority}" did not match available ${pField.name} options (${pField.options.map((o) => o.name).join(", ")}).`
+            );
           }
         } else if (pField.dataType === "TEXT") {
           await octokit.graphql(updateFieldMutation, {
@@ -50528,24 +50604,27 @@ async function assignIssueToProject({
       } else {
         console.log(`[Project] Field "${priorityFieldName}" not found on project. Skipping priority attribute.`);
       }
+    } else {
+      console.log(`[Project] No estimated priority provided. Skipping priority attribute.`);
     }
     if (size) {
-      const sField = projectDetails.fields.find(
-        (f3) => f3.name.toLowerCase() === sizeFieldName.toLowerCase()
-      );
+      const sField = findProjectField(projectDetails.fields, sizeFieldName, ["Size", "Estimate", "Estimation", "Complexity"]);
       if (sField) {
         if (sField.dataType === "SINGLE_SELECT" && sField.options) {
           const optionId = matchSelectOption(sField.options, size);
           if (optionId) {
+            const matchedOpt = sField.options.find((o) => o.id === optionId);
             await octokit.graphql(updateFieldMutation, {
               projectId: projectDetails.id,
               itemId,
               fieldId: sField.id,
               value: { singleSelectOptionId: optionId }
             });
-            console.log(`[Project] Set ${sField.name} to "${size}".`);
+            console.log(`[Project] Set ${sField.name} to "${matchedOpt?.name || size}".`);
           } else {
-            console.log(`[Project] Option "${size}" did not match available ${sField.name} options.`);
+            console.log(
+              `[Project] Option "${size}" did not match available ${sField.name} options (${sField.options.map((o) => o.name).join(", ")}).`
+            );
           }
         } else if (sField.dataType === "TEXT") {
           await octokit.graphql(updateFieldMutation, {
@@ -50559,6 +50638,8 @@ async function assignIssueToProject({
       } else {
         console.log(`[Project] Field "${sizeFieldName}" not found on project. Skipping size attribute.`);
       }
+    } else {
+      console.log(`[Project] No estimated size provided. Skipping size attribute.`);
     }
     return { itemId };
   } catch (err) {
@@ -51630,6 +51711,8 @@ async function runGitHubAction() {
       projectUrl: config.projectUrl,
       projectNumber: config.projectNumber,
       projectOwner: config.projectOwner,
+      status: config.initialStatus,
+      statusFieldName: config.statusField,
       priority: estimatedPriority,
       size: estimatedSize,
       priorityFieldName: config.priorityField,

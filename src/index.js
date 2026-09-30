@@ -647,6 +647,8 @@ async function runGitHubAction() {
       projectUrl: config.projectUrl,
       projectNumber: config.projectNumber,
       projectOwner: config.projectOwner,
+      status: config.initialStatus,
+      statusFieldName: config.statusField,
       priority: estimatedPriority,
       size: estimatedSize,
       priorityFieldName: config.priorityField,

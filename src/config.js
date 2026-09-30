@@ -18,6 +18,8 @@ export const DEFAULT_CONFIG = {
   projectOwner: "",
   priorityField: "Priority",
   sizeField: "Size",
+  statusField: "Status",
+  initialStatus: "Backlog",
   autoAssign: false,
   assignees: [],
   assignmentRules: [],
@@ -199,6 +201,22 @@ export function loadConfig(overrides = {}) {
       env.PROJECT_SIZE_FIELD ||
       fileConfig.project?.sizeField ||
       DEFAULT_CONFIG.sizeField,
+    statusField:
+      overrides.statusField ||
+      env.PROJECT_STATUS_FIELD ||
+      env.STATUS_FIELD ||
+      fileConfig.project?.statusField ||
+      DEFAULT_CONFIG.statusField,
+    initialStatus:
+      overrides.initialStatus !== undefined
+        ? overrides.initialStatus
+        : env.PROJECT_INITIAL_STATUS !== undefined
+        ? env.PROJECT_INITIAL_STATUS
+        : env.INITIAL_STATUS !== undefined
+        ? env.INITIAL_STATUS
+        : fileConfig.project?.initialStatus !== undefined
+        ? fileConfig.project.initialStatus
+        : DEFAULT_CONFIG.initialStatus,
     // Automated Triage & Assignment
     autoAssign:
       overrides.autoAssign !== undefined
