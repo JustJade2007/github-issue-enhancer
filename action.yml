@@ -1,5 +1,5 @@
 name: 'GitHub Issue Enhancer'
-description: 'Rewords and formats new GitHub issues using Gemini Flash Lite without adding new content.'
+description: 'Rewords and formats GitHub issues using Gemini Flash Lite, automates user assignment, dynamic labeling, milestone & branch linking, and GitHub Projects v2 organization.'
 author: 'JustJade2007'
 branding:
   icon: 'alert-circle'
@@ -15,7 +15,103 @@ inputs:
   gemini-model:
     description: 'Gemini model to use'
     required: false
-    default: 'gemini-2.5-flash-lite'
+    default: 'gemini-3.1-flash-lite'
+  temperature:
+    description: 'Sampling temperature for Gemini (0.0 to 1.0)'
+    required: false
+    default: '0.2'
+  custom-instruction:
+    description: 'Custom instructions or formatting guidelines for Gemini'
+    required: false
+    default: ''
+  post-comment:
+    description: 'Whether to post a comment with contributor fix instructions if applicable (true/false)'
+    required: false
+    default: 'true'
+  preserve-original:
+    description: 'Whether to append original submission in collapsible dropdown (true/false)'
+    required: false
+    default: 'true'
+  add-badge:
+    description: 'Whether to prepend [!NOTE] header badge in issue body (true/false)'
+    required: false
+    default: 'true'
+  enhance-title:
+    description: 'Whether to clarify and reword the issue title (true/false)'
+    required: false
+    default: 'false'
+  add-labels:
+    description: 'Comma-separated static labels to apply upon enhancement'
+    required: false
+    default: ''
+  ignore-authors:
+    description: 'Comma-separated usernames/bots to ignore'
+    required: false
+    default: ''
+  ignore-labels:
+    description: 'Comma-separated labels that skip enhancement if already present'
+    required: false
+    default: ''
+  project-url:
+    description: 'URL of the GitHub Project v2 (e.g. https://github.com/orgs/ORG/projects/1)'
+    required: false
+    default: ''
+  project-token:
+    description: 'Token with project:write permission (defaults to github-token)'
+    required: false
+    default: ''
+  project-priority-field:
+    description: 'Field name for priority in GitHub Project (default: "Priority")'
+    required: false
+    default: 'Priority'
+  project-size-field:
+    description: 'Field name for size in GitHub Project (default: "Size")'
+    required: false
+    default: 'Size'
+  project-status-field:
+    description: 'Field name for status in GitHub Project (default: "Status")'
+    required: false
+    default: 'Status'
+  project-initial-status:
+    description: 'Initial status option to assign to newly added issues (default: "Backlog")'
+    required: false
+    default: 'Backlog'
+  auto-assign:
+    description: 'Whether to automatically assign repository owner or designated assignees (true/false)'
+    required: false
+    default: 'false'
+  assignees:
+    description: 'Comma-separated GitHub usernames to assign to the issue'
+    required: false
+    default: ''
+  milestone:
+    description: 'Milestone name, number, or "auto" to let Gemini pick from open milestones'
+    required: false
+    default: ''
+  create-branch:
+    description: 'Whether to create and link a development branch for this issue (true/false)'
+    required: false
+    default: 'false'
+  branch-prefix:
+    description: 'Prefix for newly created development branches (default: "issue-")'
+    required: false
+    default: 'issue-'
+  link-related:
+    description: 'Whether to detect and cross-reference related issues (true/false)'
+    required: false
+    default: 'true'
+  link-dependencies:
+    description: 'Whether to detect and link blocking/blocked-by issues (true/false)'
+    required: false
+    default: 'true'
+  link-sub-issues:
+    description: 'Whether to detect and link parent/sub-issues (true/false)'
+    required: false
+    default: 'true'
+  close-duplicates:
+    description: 'Whether to apply the duplicate label and close the issue if Gemini is certain it is a duplicate (true/false)'
+    required: false
+    default: 'true'
 
 runs:
   using: 'composite'
@@ -30,9 +126,40 @@ runs:
       env:
         GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
+        GH_TOKEN: ${{ inputs.github-token }}
         ISSUE_NUMBER: ${{ github.event.issue.number }}
         ISSUE_TITLE: ${{ github.event.issue.title }}
         ISSUE_BODY: ${{ github.event.issue.body }}
+        ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+        ISSUE_LABELS: ${{ toJson(github.event.issue.labels) }}
         REPOSITORY: ${{ github.repository }}
+        COMMENT_BODY: ${{ github.event.comment.body }}
+        COMMENT_ID: ${{ github.event.comment.id }}
+        COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+        COMMENT_AUTHOR_ASSOCIATION: ${{ github.event.comment.author_association }}
         GEMINI_MODEL: ${{ inputs.gemini-model }}
+        TEMPERATURE: ${{ inputs.temperature }}
+        CUSTOM_INSTRUCTION: ${{ inputs.custom-instruction }}
+        POST_COMMENT: ${{ inputs.post-comment }}
+        PRESERVE_ORIGINAL: ${{ inputs.preserve-original }}
+        ADD_BADGE: ${{ inputs.add-badge }}
+        ENHANCE_TITLE: ${{ inputs.enhance-title }}
+        ADD_LABELS: ${{ inputs.add-labels }}
+        IGNORE_AUTHORS: ${{ inputs.ignore-authors }}
+        IGNORE_LABELS: ${{ inputs.ignore-labels }}
+        PROJECT_URL: ${{ inputs.project-url }}
+        PROJECT_TOKEN: ${{ inputs.project-token }}
+        PROJECT_PRIORITY_FIELD: ${{ inputs.project-priority-field }}
+        PROJECT_SIZE_FIELD: ${{ inputs.project-size-field }}
+        PROJECT_STATUS_FIELD: ${{ inputs.project-status-field }}
+        PROJECT_INITIAL_STATUS: ${{ inputs.project-initial-status }}
+        AUTO_ASSIGN: ${{ inputs.auto-assign }}
+        ASSIGNEES: ${{ inputs.assignees }}
+        MILESTONE: ${{ inputs.milestone }}
+        CREATE_BRANCH: ${{ inputs.create-branch }}
+        BRANCH_PREFIX: ${{ inputs.branch-prefix }}
+        LINK_RELATED: ${{ inputs.link-related }}
+        LINK_DEPENDENCIES: ${{ inputs.link-dependencies }}
+        LINK_SUB_ISSUES: ${{ inputs.link-sub-issues }}
+        CLOSE_DUPLICATES: ${{ inputs.close-duplicates }}
       run: node "${{ github.action_path }}/dist/index.mjs"

@@ -1,4 +1,4 @@
-﻿# Dependencies
+# Dependencies
 node_modules/
 
 # Environment variables & secrets
@@ -22,3 +22,16 @@ Thumbs.db
 .gemini/
 .agents/
 antigravity/
+.antigravity/
+*.local
+
+# TODO files
+TODO
+TODO.md
+*.todo
+
+# Keys and credentials reference
+keys.md
+KEYS.md
+keys.txt
+

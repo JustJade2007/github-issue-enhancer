@@ -1,7 +1,7 @@
-﻿{
+{
   "name": "github-issue-enhancer",
-  "version": "0.1.0",
-  "description": "Rewords and formats new GitHub issues using Gemini Flash Lite without adding new content.",
+  "version": "0.5.0",
+  "description": "Rewords and formats GitHub issues using Gemini Flash Lite, automates user assignment, dynamic labeling, milestone & branch linking, and GitHub Projects v2 organization.",
   "type": "module",
   "main": "src/index.js",
   "bin": {

@@ -12,20 +12,11 @@ var __require = /* @__PURE__ */ ((x2) => typeof require !== "undefined" ? requir
   if (typeof require !== "undefined") return require.apply(this, arguments);
   throw Error('Dynamic require of "' + x2 + '" is not supported');
 });
-var __esm = (fn, res, err) => function __init() {
-  if (err) throw err[0];
-  try {
-    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-  } catch (e2) {
-    throw err = [e2], e2;
-  }
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
 };
 var __commonJS = (cb, mod) => function __require2() {
-  try {
-    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-  } catch (e2) {
-    throw mod = 0, e2;
-  }
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
 var __export = (target, all) => {
   for (var name in all)
@@ -119,7 +110,7 @@ var require_package = __commonJS({
 // node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
   "node_modules/dotenv/lib/main.js"(exports, module) {
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var path2 = __require("path");
     var os = __require("os");
     var crypto2 = __require("crypto");
@@ -228,7 +219,7 @@ var require_main = __commonJS({
       if (options && options.path && options.path.length > 0) {
         if (Array.isArray(options.path)) {
           for (const filepath of options.path) {
-            if (fs4.existsSync(filepath)) {
+            if (fs5.existsSync(filepath)) {
               possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
             }
           }
@@ -238,7 +229,7 @@ var require_main = __commonJS({
       } else {
         possibleVaultPath = path2.resolve(process.cwd(), ".env.vault");
       }
-      if (fs4.existsSync(possibleVaultPath)) {
+      if (fs5.existsSync(possibleVaultPath)) {
         return possibleVaultPath;
       }
       return null;
@@ -287,7 +278,7 @@ var require_main = __commonJS({
       const parsedAll = {};
       for (const path3 of optionPaths) {
         try {
-          const parsed = DotenvModule.parse(fs4.readFileSync(path3, { encoding }));
+          const parsed = DotenvModule.parse(fs5.readFileSync(path3, { encoding }));
           DotenvModule.populate(parsedAll, parsed, options);
         } catch (e2) {
           if (debug) {
@@ -983,7 +974,7 @@ var require_common = __commonJS({
     var extend_1 = __importDefault(require_extend());
     var util_cjs_1 = __importDefault(require_util());
     var pkg = util_cjs_1.default.pkg;
-    exports.GAXIOS_ERROR_SYMBOL = /* @__PURE__ */ Symbol.for(`${pkg.name}-gaxios-error`);
+    exports.GAXIOS_ERROR_SYMBOL = Symbol.for(`${pkg.name}-gaxios-error`);
     var GaxiosError = class _GaxiosError extends Error {
       config;
       response;
@@ -2087,7 +2078,7 @@ var require_dist = __commonJS({
     var http3 = __importStar(__require("http"));
     var https_1 = __require("https");
     __exportStar(require_helpers(), exports);
-    var INTERNAL = /* @__PURE__ */ Symbol("AgentBaseInternalState");
+    var INTERNAL = Symbol("AgentBaseInternalState");
     var Agent = class extends http3.Agent {
       constructor(opts) {
         super(opts);
@@ -2658,11 +2649,11 @@ var require_ponyfill_es2018 = __commonJS({
           return front._elements[cursor];
         }
       }
-      const AbortSteps = /* @__PURE__ */ Symbol("[[AbortSteps]]");
-      const ErrorSteps = /* @__PURE__ */ Symbol("[[ErrorSteps]]");
-      const CancelSteps = /* @__PURE__ */ Symbol("[[CancelSteps]]");
-      const PullSteps = /* @__PURE__ */ Symbol("[[PullSteps]]");
-      const ReleaseSteps = /* @__PURE__ */ Symbol("[[ReleaseSteps]]");
+      const AbortSteps = Symbol("[[AbortSteps]]");
+      const ErrorSteps = Symbol("[[ErrorSteps]]");
+      const CancelSteps = Symbol("[[CancelSteps]]");
+      const PullSteps = Symbol("[[PullSteps]]");
+      const ReleaseSteps = Symbol("[[ReleaseSteps]]");
       function ReadableStreamReaderGenericInitialize(reader, stream) {
         reader._ownerReadableStream = stream;
         stream._reader = reader;
@@ -7244,7 +7235,7 @@ var require_node_domexception = __commonJS({
 });
 
 // node_modules/fetch-blob/from.js
-import { statSync, createReadStream, promises as fs } from "node:fs";
+import { statSync, createReadStream, promises as fs2 } from "node:fs";
 import { basename } from "node:path";
 var import_node_domexception, stat, blobFromSync, blobFrom, fileFrom, fileFromSync, fromBlob, fromFile, BlobDataItem;
 var init_from = __esm({
@@ -7252,7 +7243,7 @@ var init_from = __esm({
     import_node_domexception = __toESM(require_node_domexception(), 1);
     init_file();
     init_fetch_blob();
-    ({ stat } = fs);
+    ({ stat } = fs2);
     blobFromSync = (path2, type) => fromBlob(statSync(path2), path2, type);
     blobFrom = (path2, type) => stat(path2).then((stat3) => fromBlob(stat3, path2, type));
     fileFrom = (path2, type) => stat(path2).then((stat3) => fromFile(stat3, path2, type));
@@ -7726,7 +7717,7 @@ var init_body = __esm({
     init_base();
     init_is();
     pipeline = promisify(Stream.pipeline);
-    INTERNALS = /* @__PURE__ */ Symbol("Body internals");
+    INTERNALS = Symbol("Body internals");
     Body = class {
       constructor(body, {
         size = 0
@@ -8096,7 +8087,7 @@ var init_headers = __esm({
       /**
        * For better console.log(headers) and also to convert Headers into Node.js Request compatible format
        */
-      [/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")]() {
+      [Symbol.for("nodejs.util.inspect.custom")]() {
         return [...this.keys()].reduce((result, key) => {
           const values = this.getAll(key);
           if (key === "host") {
@@ -8136,7 +8127,7 @@ var init_response = __esm({
     init_headers();
     init_body();
     init_is_redirect();
-    INTERNALS2 = /* @__PURE__ */ Symbol("Response internals");
+    INTERNALS2 = Symbol("Response internals");
     Response2 = class _Response extends Body {
       constructor(body = null, options = {}) {
         super(body, options);
@@ -8426,7 +8417,7 @@ var init_request = __esm({
     init_is();
     init_get_search();
     init_referrer();
-    INTERNALS3 = /* @__PURE__ */ Symbol("Request internals");
+    INTERNALS3 = Symbol("Request internals");
     isRequest = (object) => {
       return typeof object === "object" && typeof object[INTERNALS3] === "object";
     };
@@ -8607,7 +8598,7 @@ var init_request = __esm({
         path: parsedURL.pathname + search,
         // The following options are not expressed in the URL
         method: request2.method,
-        headers: headers[/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")](),
+        headers: headers[Symbol.for("nodejs.util.inspect.custom")](),
         insecureHTTPParser: request2.insecureHTTPParser,
         agent
       };
@@ -12447,7 +12438,7 @@ var require_util2 = __commonJS({
     exports.removeUndefinedValuesInObject = removeUndefinedValuesInObject;
     exports.isValidFile = isValidFile;
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var os = __require("os");
     var path2 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
@@ -12535,7 +12526,7 @@ var require_util2 = __commonJS({
     }
     async function isValidFile(filePath) {
       try {
-        const stats = await fs4.promises.lstat(filePath);
+        const stats = await fs5.promises.lstat(filePath);
         return stats.isFile();
       } catch (e2) {
         return false;
@@ -12696,8 +12687,8 @@ var require_authclient = __commonJS({
        * making an RPC call, for logging purposes, as well as a string ID that can be
        * used to correlate calls and responses.
        */
-      static RequestMethodNameSymbol = /* @__PURE__ */ Symbol("request method name");
-      static RequestLogIdSymbol = /* @__PURE__ */ Symbol("request log id");
+      static RequestMethodNameSymbol = Symbol("request method name");
+      static RequestLogIdSymbol = Symbol("request log id");
       constructor(opts = {}) {
         super();
         const options = (0, util_1.originalOrCamelOptions)(opts);
@@ -14490,10 +14481,10 @@ var require_getCredentials = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
     var path2 = __require("path");
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
-    var readFile = fs4.readFile ? (0, util_1.promisify)(fs4.readFile) : async () => {
+    var readFile = fs5.readFile ? (0, util_1.promisify)(fs5.readFile) : async () => {
       throw new errorWithCode_1.ErrorWithCode("use key rather than keyFile.", "MISSING_CREDENTIALS");
     };
     var ExtensionFiles;
@@ -16170,12 +16161,12 @@ var require_filesubjecttokensupplier = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FileSubjectTokenSupplier = void 0;
     var util_1 = __require("util");
-    var fs4 = __require("fs");
-    var readFile = (0, util_1.promisify)(fs4.readFile ?? (() => {
+    var fs5 = __require("fs");
+    var readFile = (0, util_1.promisify)(fs5.readFile ?? (() => {
     }));
-    var realpath = (0, util_1.promisify)(fs4.realpath ?? (() => {
+    var realpath = (0, util_1.promisify)(fs5.realpath ?? (() => {
     }));
-    var lstat = (0, util_1.promisify)(fs4.lstat ?? (() => {
+    var lstat = (0, util_1.promisify)(fs5.lstat ?? (() => {
     }));
     var FileSubjectTokenSupplier = class {
       filePath;
@@ -16293,7 +16284,7 @@ var require_certificatesubjecttokensupplier = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CertificateSubjectTokenSupplier = exports.InvalidConfigurationError = exports.CertificateSourceUnavailableError = exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = void 0;
     var util_1 = require_util2();
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var crypto_1 = __require("crypto");
     var https2 = __require("https");
     exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = "GOOGLE_API_CERTIFICATE_CONFIG";
@@ -16387,7 +16378,7 @@ var require_certificatesubjecttokensupplier = __commonJS({
         const configPath = this.certificateConfigPath;
         let fileContents;
         try {
-          fileContents = await fs4.promises.readFile(configPath, "utf8");
+          fileContents = await fs5.promises.readFile(configPath, "utf8");
         } catch (err) {
           throw new CertificateSourceUnavailableError(`Failed to read certificate config file at: ${configPath}`);
         }
@@ -16412,14 +16403,14 @@ var require_certificatesubjecttokensupplier = __commonJS({
       async #getKeyAndCert(certPath, keyPath) {
         let cert, key;
         try {
-          cert = await fs4.promises.readFile(certPath);
+          cert = await fs5.promises.readFile(certPath);
           new crypto_1.X509Certificate(cert);
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           throw new CertificateSourceUnavailableError(`Failed to read certificate file at ${certPath}: ${message}`);
         }
         try {
-          key = await fs4.promises.readFile(keyPath);
+          key = await fs5.promises.readFile(keyPath);
           (0, crypto_1.createPrivateKey)(key);
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
@@ -16438,7 +16429,7 @@ var require_certificatesubjecttokensupplier = __commonJS({
           return JSON.stringify([leafCert.raw.toString("base64")]);
         }
         try {
-          const chainPems = await fs4.promises.readFile(this.trustChainPath, "utf8");
+          const chainPems = await fs5.promises.readFile(this.trustChainPath, "utf8");
           const pemBlocks = chainPems.match(/-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----/g) ?? [];
           const chainCerts = pemBlocks.map((pem, index) => {
             try {
@@ -17140,7 +17131,7 @@ var require_pluggable_auth_handler = __commonJS({
     exports.PluggableAuthHandler = exports.ExecutableError = void 0;
     var executable_response_1 = require_executable_response();
     var childProcess = __require("child_process");
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var ExecutableError = class extends Error {
       /**
        * The exit code returned by the executable.
@@ -17225,14 +17216,14 @@ var require_pluggable_auth_handler = __commonJS({
         }
         let filePath;
         try {
-          filePath = await fs4.promises.realpath(this.outputFile);
+          filePath = await fs5.promises.realpath(this.outputFile);
         } catch {
           return void 0;
         }
-        if (!(await fs4.promises.lstat(filePath)).isFile()) {
+        if (!(await fs5.promises.lstat(filePath)).isFile()) {
           return void 0;
         }
-        const responseString = await fs4.promises.readFile(filePath, {
+        const responseString = await fs5.promises.readFile(filePath, {
           encoding: "utf8"
         });
         if (responseString === "") {
@@ -17643,7 +17634,7 @@ var require_gdchclient = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GdchClient = exports.GDCH_SERVICE_ACCOUNT_TYPE = void 0;
     var crypto2 = __require("crypto");
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var https2 = __require("https");
     var oauth2client_1 = require_oauth2client();
     var DEFAULT_LIFETIME_IN_SECONDS = 3600;
@@ -17866,7 +17857,7 @@ var require_gdchclient = __commonJS({
         const currentPath = this.caCertPath;
         this.caAgentPromise = (async () => {
           try {
-            const ca = await fs4.promises.readFile(currentPath);
+            const ca = await fs5.promises.readFile(currentPath);
             return new https2.Agent({ ca });
           } catch (err) {
             if (this.cachedCaCertPath === currentPath) {
@@ -17907,7 +17898,7 @@ var require_gdchclient = __commonJS({
           }
         };
       }
-      [/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")]() {
+      [Symbol.for("nodejs.util.inspect.custom")]() {
         return this.toJSON();
       }
       base64UrlEncode(str) {
@@ -17926,7 +17917,7 @@ var require_googleauth = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GoogleAuth = exports.GoogleAuthExceptionMessages = void 0;
     var child_process_1 = __require("child_process");
-    var fs4 = __require("fs");
+    var fs5 = __require("fs");
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
     var os = __require("os");
@@ -18228,7 +18219,7 @@ var require_googleauth = __commonJS({
           return null;
         }
         const location = path2.join(configDir, "application_default_credentials.json");
-        if (!fs4.existsSync(location)) {
+        if (!fs5.existsSync(location)) {
           return null;
         }
         const client = await this._getApplicationCredentialsFromFilePath(location, options);
@@ -18245,8 +18236,8 @@ var require_googleauth = __commonJS({
           throw new Error("The file path is invalid.");
         }
         try {
-          filePath = fs4.realpathSync(filePath);
-          if (!fs4.lstatSync(filePath).isFile()) {
+          filePath = fs5.realpathSync(filePath);
+          if (!fs5.lstatSync(filePath).isFile()) {
             throw new Error();
           }
         } catch (err) {
@@ -18255,7 +18246,7 @@ var require_googleauth = __commonJS({
           }
           throw err;
         }
-        const readStream = fs4.createReadStream(filePath);
+        const readStream = fs5.createReadStream(filePath);
         return this.fromStream(readStream, options);
       }
       /**
@@ -18583,7 +18574,7 @@ var require_googleauth = __commonJS({
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
           const filePath = path2.resolve(this.keyFilename);
-          const stream = fs4.createReadStream(filePath);
+          const stream = fs5.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
           const client = await this.fromAPIKey(this.apiKey, this.clientOptions);
@@ -19142,10 +19133,10 @@ var require_constants = __commonJS({
       EMPTY_BUFFER: Buffer.alloc(0),
       GUID: "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",
       hasBlob,
-      kForOnEventAttribute: /* @__PURE__ */ Symbol("kIsForOnEventAttribute"),
-      kListener: /* @__PURE__ */ Symbol("kListener"),
-      kStatusCode: /* @__PURE__ */ Symbol("status-code"),
-      kWebSocket: /* @__PURE__ */ Symbol("websocket"),
+      kForOnEventAttribute: Symbol("kIsForOnEventAttribute"),
+      kListener: Symbol("kListener"),
+      kStatusCode: Symbol("status-code"),
+      kWebSocket: Symbol("websocket"),
       NOOP: () => {
       }
     };
@@ -19231,8 +19222,8 @@ var require_buffer_util = __commonJS({
 var require_limiter = __commonJS({
   "node_modules/ws/lib/limiter.js"(exports, module) {
     "use strict";
-    var kDone = /* @__PURE__ */ Symbol("kDone");
-    var kRun = /* @__PURE__ */ Symbol("kRun");
+    var kDone = Symbol("kDone");
+    var kRun = Symbol("kRun");
     var Limiter = class {
       /**
        * Creates a new `Limiter`.
@@ -19287,11 +19278,11 @@ var require_permessage_deflate = __commonJS({
     var { kStatusCode } = require_constants();
     var FastBuffer = Buffer[Symbol.species];
     var TRAILER = Buffer.from([0, 0, 255, 255]);
-    var kPerMessageDeflate = /* @__PURE__ */ Symbol("permessage-deflate");
-    var kTotalLength = /* @__PURE__ */ Symbol("total-length");
-    var kCallback = /* @__PURE__ */ Symbol("callback");
-    var kBuffers = /* @__PURE__ */ Symbol("buffers");
-    var kError = /* @__PURE__ */ Symbol("error");
+    var kPerMessageDeflate = Symbol("permessage-deflate");
+    var kTotalLength = Symbol("total-length");
+    var kCallback = Symbol("callback");
+    var kBuffers = Symbol("buffers");
+    var kError = Symbol("error");
     var zlibLimiter;
     var PerMessageDeflate2 = class {
       /**
@@ -20497,7 +20488,7 @@ var require_sender = __commonJS({
     var { EMPTY_BUFFER, kWebSocket, NOOP } = require_constants();
     var { isBlob: isBlob2, isValidStatusCode } = require_validation();
     var { mask: applyMask, toBuffer } = require_buffer_util();
-    var kByteLength = /* @__PURE__ */ Symbol("kByteLength");
+    var kByteLength = Symbol("kByteLength");
     var maskBuffer = Buffer.alloc(4);
     var RANDOM_POOL_SIZE = 8 * 1024;
     var randomPool;
@@ -20982,14 +20973,14 @@ var require_event_target = __commonJS({
   "node_modules/ws/lib/event-target.js"(exports, module) {
     "use strict";
     var { kForOnEventAttribute, kListener } = require_constants();
-    var kCode = /* @__PURE__ */ Symbol("kCode");
-    var kData = /* @__PURE__ */ Symbol("kData");
-    var kError = /* @__PURE__ */ Symbol("kError");
-    var kMessage = /* @__PURE__ */ Symbol("kMessage");
-    var kReason = /* @__PURE__ */ Symbol("kReason");
-    var kTarget = /* @__PURE__ */ Symbol("kTarget");
-    var kType = /* @__PURE__ */ Symbol("kType");
-    var kWasClean = /* @__PURE__ */ Symbol("kWasClean");
+    var kCode = Symbol("kCode");
+    var kData = Symbol("kData");
+    var kError = Symbol("kError");
+    var kMessage = Symbol("kMessage");
+    var kReason = Symbol("kReason");
+    var kTarget = Symbol("kTarget");
+    var kType = Symbol("kType");
+    var kWasClean = Symbol("kWasClean");
     var Event = class {
       /**
        * Create a new `Event`.
@@ -21391,7 +21382,7 @@ var require_websocket = __commonJS({
     } = require_event_target();
     var { format, parse: parse2 } = require_extension();
     var { toBuffer } = require_buffer_util();
-    var kAborted = /* @__PURE__ */ Symbol("kAborted");
+    var kAborted = Symbol("kAborted");
     var protocolVersions = [8, 13];
     var readyStates = ["CONNECTING", "OPEN", "CLOSING", "CLOSED"];
     var subprotocolRegex = /^[!#$%&'*+\-.0-9A-Z^_`|a-z~]+$/;
@@ -22907,14 +22898,119 @@ var require_fast_content_type_parse = __commonJS({
 })();
 
 // src/index.js
-import fs3 from "fs";
+import fs4 from "fs";
 import readline from "readline";
+
+// src/config.js
+import fs from "fs";
+var DEFAULT_CONFIG = {
+  geminiModel: "gemini-3.1-flash-lite",
+  temperature: 0.2,
+  customInstruction: "",
+  postComment: true,
+  preserveOriginal: true,
+  addBadge: true,
+  enhanceTitle: false,
+  addLabels: [],
+  ignoreAuthors: [],
+  ignoreLabels: [],
+  // Triage & Project Settings
+  projectUrl: "",
+  projectToken: "",
+  projectNumber: null,
+  projectOwner: "",
+  priorityField: "Priority",
+  sizeField: "Size",
+  statusField: "Status",
+  initialStatus: "Backlog",
+  autoAssign: false,
+  assignees: [],
+  assignmentRules: [],
+  milestone: "",
+  createBranch: false,
+  branchPrefix: "issue-",
+  linkRelated: true,
+  linkDependencies: true,
+  linkSubIssues: true,
+  closeDuplicates: true
+};
+function parseBoolean(val, defaultValue = true) {
+  if (val === void 0 || val === null || val === "") return defaultValue;
+  if (typeof val === "boolean") return val;
+  const str = String(val).trim().toLowerCase();
+  if (str === "false" || str === "0" || str === "no" || str === "off") return false;
+  if (str === "true" || str === "1" || str === "yes" || str === "on") return true;
+  return defaultValue;
+}
+function parseList(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.map((s2) => String(s2).trim()).filter(Boolean);
+  return String(val).split(",").map((s2) => s2.trim()).filter(Boolean);
+}
+function loadConfig(overrides = {}) {
+  let fileConfig = {};
+  const configPaths = [
+    ".github/issue-enhancer.json",
+    ".github/issue-enhancer-config.json",
+    "issue-enhancer.json"
+  ];
+  for (const configPath of configPaths) {
+    if (fs.existsSync(configPath)) {
+      try {
+        fileConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+        console.log(`[Config] Loaded settings from ${configPath}`);
+        break;
+      } catch (err) {
+        console.warn(`[Config] Warning: Failed to parse ${configPath}:`, err.message);
+      }
+    }
+  }
+  const env2 = process.env;
+  const config = {
+    geminiModel: overrides.model || env2.GEMINI_MODEL || fileConfig.geminiModel || DEFAULT_CONFIG.geminiModel,
+    temperature: overrides.temperature !== void 0 ? parseFloat(overrides.temperature) : env2.TEMPERATURE !== void 0 && env2.TEMPERATURE !== "" ? parseFloat(env2.TEMPERATURE) : fileConfig.temperature !== void 0 ? parseFloat(fileConfig.temperature) : DEFAULT_CONFIG.temperature,
+    customInstruction: overrides.customInstruction !== void 0 ? overrides.customInstruction : env2.CUSTOM_INSTRUCTION !== void 0 ? env2.CUSTOM_INSTRUCTION : fileConfig.customInstruction || DEFAULT_CONFIG.customInstruction,
+    postComment: overrides.postComment !== void 0 ? parseBoolean(overrides.postComment, DEFAULT_CONFIG.postComment) : env2.POST_COMMENT !== void 0 ? parseBoolean(env2.POST_COMMENT, DEFAULT_CONFIG.postComment) : fileConfig.postComment !== void 0 ? parseBoolean(fileConfig.postComment, DEFAULT_CONFIG.postComment) : DEFAULT_CONFIG.postComment,
+    preserveOriginal: overrides.preserveOriginal !== void 0 ? parseBoolean(overrides.preserveOriginal, DEFAULT_CONFIG.preserveOriginal) : env2.PRESERVE_ORIGINAL !== void 0 ? parseBoolean(env2.PRESERVE_ORIGINAL, DEFAULT_CONFIG.preserveOriginal) : fileConfig.preserveOriginal !== void 0 ? parseBoolean(fileConfig.preserveOriginal, DEFAULT_CONFIG.preserveOriginal) : DEFAULT_CONFIG.preserveOriginal,
+    addBadge: overrides.addBadge !== void 0 ? parseBoolean(overrides.addBadge, DEFAULT_CONFIG.addBadge) : env2.ADD_BADGE !== void 0 ? parseBoolean(env2.ADD_BADGE, DEFAULT_CONFIG.addBadge) : fileConfig.addBadge !== void 0 ? parseBoolean(fileConfig.addBadge, DEFAULT_CONFIG.addBadge) : DEFAULT_CONFIG.addBadge,
+    enhanceTitle: overrides.enhanceTitle !== void 0 ? parseBoolean(overrides.enhanceTitle, DEFAULT_CONFIG.enhanceTitle) : env2.ENHANCE_TITLE !== void 0 ? parseBoolean(env2.ENHANCE_TITLE, DEFAULT_CONFIG.enhanceTitle) : fileConfig.enhanceTitle !== void 0 ? parseBoolean(fileConfig.enhanceTitle, DEFAULT_CONFIG.enhanceTitle) : DEFAULT_CONFIG.enhanceTitle,
+    addLabels: overrides.addLabels !== void 0 ? parseList(overrides.addLabels) : env2.ADD_LABELS !== void 0 ? parseList(env2.ADD_LABELS) : fileConfig.addLabels !== void 0 ? parseList(fileConfig.addLabels) : DEFAULT_CONFIG.addLabels,
+    ignoreAuthors: overrides.ignoreAuthors !== void 0 ? parseList(overrides.ignoreAuthors) : env2.IGNORE_AUTHORS !== void 0 ? parseList(env2.IGNORE_AUTHORS) : fileConfig.ignoreAuthors !== void 0 ? parseList(fileConfig.ignoreAuthors) : DEFAULT_CONFIG.ignoreAuthors,
+    ignoreLabels: overrides.ignoreLabels !== void 0 ? parseList(overrides.ignoreLabels) : env2.IGNORE_LABELS !== void 0 ? parseList(env2.IGNORE_LABELS) : fileConfig.ignoreLabels !== void 0 ? parseList(fileConfig.ignoreLabels) : DEFAULT_CONFIG.ignoreLabels,
+    // GitHub Projects v2
+    projectUrl: overrides.projectUrl || env2.PROJECT_URL || fileConfig.project?.url || fileConfig.projectUrl || DEFAULT_CONFIG.projectUrl,
+    projectToken: overrides.projectToken || env2.PROJECT_TOKEN || env2.GH_PAT || env2.PAT_TOKEN || fileConfig.project?.token || env2.GITHUB_TOKEN || env2.GH_TOKEN || DEFAULT_CONFIG.projectToken,
+    projectNumber: overrides.projectNumber !== void 0 ? overrides.projectNumber : env2.PROJECT_NUMBER !== void 0 ? env2.PROJECT_NUMBER : fileConfig.project?.number || DEFAULT_CONFIG.projectNumber,
+    projectOwner: overrides.projectOwner || env2.PROJECT_OWNER || fileConfig.project?.owner || DEFAULT_CONFIG.projectOwner,
+    priorityField: overrides.priorityField || env2.PROJECT_PRIORITY_FIELD || fileConfig.project?.priorityField || DEFAULT_CONFIG.priorityField,
+    sizeField: overrides.sizeField || env2.PROJECT_SIZE_FIELD || fileConfig.project?.sizeField || DEFAULT_CONFIG.sizeField,
+    statusField: overrides.statusField || env2.PROJECT_STATUS_FIELD || env2.STATUS_FIELD || fileConfig.project?.statusField || DEFAULT_CONFIG.statusField,
+    initialStatus: overrides.initialStatus !== void 0 ? overrides.initialStatus : env2.PROJECT_INITIAL_STATUS !== void 0 ? env2.PROJECT_INITIAL_STATUS : env2.INITIAL_STATUS !== void 0 ? env2.INITIAL_STATUS : fileConfig.project?.initialStatus !== void 0 ? fileConfig.project.initialStatus : DEFAULT_CONFIG.initialStatus,
+    // Automated Triage & Assignment
+    autoAssign: overrides.autoAssign !== void 0 ? parseBoolean(overrides.autoAssign, DEFAULT_CONFIG.autoAssign) : env2.AUTO_ASSIGN !== void 0 ? parseBoolean(env2.AUTO_ASSIGN, DEFAULT_CONFIG.autoAssign) : fileConfig.triage?.autoAssign !== void 0 ? parseBoolean(fileConfig.triage.autoAssign, DEFAULT_CONFIG.autoAssign) : DEFAULT_CONFIG.autoAssign,
+    assignees: overrides.assignees !== void 0 ? parseList(overrides.assignees) : env2.ASSIGNEES !== void 0 ? parseList(env2.ASSIGNEES) : fileConfig.triage?.assignees !== void 0 ? parseList(fileConfig.triage.assignees) : DEFAULT_CONFIG.assignees,
+    assignmentRules: fileConfig.triage?.assignmentRules || fileConfig.assignmentRules || DEFAULT_CONFIG.assignmentRules,
+    // Milestones
+    milestone: overrides.milestone !== void 0 ? String(overrides.milestone).trim() : env2.MILESTONE !== void 0 ? String(env2.MILESTONE).trim() : fileConfig.triage?.milestone !== void 0 ? String(fileConfig.triage.milestone).trim() : DEFAULT_CONFIG.milestone,
+    // Branch creation
+    createBranch: overrides.createBranch !== void 0 ? parseBoolean(overrides.createBranch, DEFAULT_CONFIG.createBranch) : env2.CREATE_BRANCH !== void 0 ? parseBoolean(env2.CREATE_BRANCH, DEFAULT_CONFIG.createBranch) : fileConfig.triage?.createBranch !== void 0 ? parseBoolean(fileConfig.triage.createBranch, DEFAULT_CONFIG.createBranch) : DEFAULT_CONFIG.createBranch,
+    branchPrefix: overrides.branchPrefix || env2.BRANCH_PREFIX || fileConfig.triage?.branchPrefix || DEFAULT_CONFIG.branchPrefix,
+    linkRelated: overrides.linkRelated !== void 0 ? parseBoolean(overrides.linkRelated, DEFAULT_CONFIG.linkRelated) : env2.LINK_RELATED !== void 0 ? parseBoolean(env2.LINK_RELATED, DEFAULT_CONFIG.linkRelated) : fileConfig.triage?.linkRelated !== void 0 ? parseBoolean(fileConfig.triage.linkRelated, DEFAULT_CONFIG.linkRelated) : DEFAULT_CONFIG.linkRelated,
+    linkDependencies: overrides.linkDependencies !== void 0 ? parseBoolean(overrides.linkDependencies, DEFAULT_CONFIG.linkDependencies) : env2.LINK_DEPENDENCIES !== void 0 ? parseBoolean(env2.LINK_DEPENDENCIES, DEFAULT_CONFIG.linkDependencies) : fileConfig.triage?.linkDependencies !== void 0 ? parseBoolean(fileConfig.triage.linkDependencies, DEFAULT_CONFIG.linkDependencies) : DEFAULT_CONFIG.linkDependencies,
+    linkSubIssues: overrides.linkSubIssues !== void 0 ? parseBoolean(overrides.linkSubIssues, DEFAULT_CONFIG.linkSubIssues) : env2.LINK_SUB_ISSUES !== void 0 ? parseBoolean(env2.LINK_SUB_ISSUES, DEFAULT_CONFIG.linkSubIssues) : fileConfig.triage?.linkSubIssues !== void 0 ? parseBoolean(fileConfig.triage.linkSubIssues, DEFAULT_CONFIG.linkSubIssues) : DEFAULT_CONFIG.linkSubIssues,
+    closeDuplicates: overrides.closeDuplicates !== void 0 ? parseBoolean(overrides.closeDuplicates, DEFAULT_CONFIG.closeDuplicates) : env2.CLOSE_DUPLICATES !== void 0 ? parseBoolean(env2.CLOSE_DUPLICATES, DEFAULT_CONFIG.closeDuplicates) : fileConfig.triage?.closeDuplicates !== void 0 ? parseBoolean(fileConfig.triage.closeDuplicates, DEFAULT_CONFIG.closeDuplicates) : DEFAULT_CONFIG.closeDuplicates
+  };
+  if (isNaN(config.temperature) || config.temperature < 0 || config.temperature > 1) {
+    config.temperature = DEFAULT_CONFIG.temperature;
+  }
+  return config;
+}
 
 // node_modules/@google/genai/dist/node/index.mjs
 var import_p_retry = __toESM(require_p_retry(), 1);
 var import_google_auth_library = __toESM(require_src5(), 1);
 import { createWriteStream } from "fs";
-import * as fs2 from "fs/promises";
+import * as fs3 from "fs/promises";
 import { writeFile } from "fs/promises";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
@@ -34039,7 +34135,7 @@ var VERTEX_AI_API_DEFAULT_VERSION = "v1beta1";
 var GOOGLE_AI_API_DEFAULT_VERSION = "v1beta";
 var MULTI_REGIONAL_LOCATIONS = /* @__PURE__ */ new Set(["us", "eu"]);
 function raiseUndiciTimeouts(timeout) {
-  const dispatcherSymbol = /* @__PURE__ */ Symbol.for("undici.globalDispatcher.1");
+  const dispatcherSymbol = Symbol.for("undici.globalDispatcher.1");
   const globalDispatcher = globalThis[dispatcherSymbol];
   if (!globalDispatcher) {
     return;
@@ -43630,8 +43726,8 @@ var GeminiNextGenEnvironmentFiles = class {
       try {
         const req = globalThis.require;
         if (req) {
-          const fs4 = req("fs");
-          buffer = fs4.readFileSync(params.file);
+          const fs5 = req("fs");
+          buffer = fs5.readFileSync(params.file);
         }
       } catch (_j) {
       }
@@ -43639,8 +43735,8 @@ var GeminiNextGenEnvironmentFiles = class {
         try {
           const mod = (_b = (_a2 = globalThis.process.mainModule) === null || _a2 === void 0 ? void 0 : _a2.require) !== null && _b !== void 0 ? _b : globalThis.require;
           if (mod) {
-            const fs4 = mod("fs");
-            buffer = fs4.readFileSync(params.file);
+            const fs5 = mod("fs");
+            buffer = fs5.readFileSync(params.file);
           }
         } catch (_k) {
         }
@@ -45886,7 +45982,7 @@ var NodeUploader = class {
   async stat(file) {
     const fileStat = { size: 0, type: void 0 };
     if (typeof file === "string") {
-      const originalStat = await fs2.stat(file);
+      const originalStat = await fs3.stat(file);
       fileStat.size = originalStat.size;
       fileStat.type = this.inferMimeType(file);
       return fileStat;
@@ -46034,7 +46130,7 @@ var NodeUploader = class {
     let fileHandle;
     const fileName = path.basename(file);
     try {
-      fileHandle = await fs2.open(file, "r");
+      fileHandle = await fs3.open(file, "r");
       if (!fileHandle) {
         throw new Error(`Failed to open file`);
       }
@@ -46297,54 +46393,309 @@ function getApiKeyFromEnv() {
 }
 
 // src/gemini.js
-var SYSTEM_INSTRUCTION = `You are an expert GitHub issue formatter and technical rewording assistant.
-Your task is to take an issue title and description and reword/expand it into a clean, professional, and well-structured GitHub issue format WITHOUT ADDING NEW CONTENT, ASSUMPTIONS, OR FABRICATIONS.
+var SYSTEM_INSTRUCTION = `You are an expert GitHub issue formatter, evaluator, and technical triage assistant.
+Your task is fourfold:
+1. Evaluate whether the original issue description is ALREADY thorough and well-explained on its own ('YES' or 'NO').
+   Criteria: An issue is considered thorough ('YES') if it contains more than 2 well-written, descriptive paragraphs or has equivalent well-structured explanation (e.g., clear problem statement, steps to reproduce, or clear technical specifications) and does not need structural rewording or formatting. If the issue is brief, shorthand, fragmented, lacking clarity or structure, or has 2 or fewer brief paragraphs without clear organization, mark it as 'NO'.
+2. Re-format and reword the issue title and description into a clean, professional, and well-structured GitHub issue format WITHOUT ADDING NEW CONTENT, ASSUMPTIONS, OR FABRICATIONS to the issue description.
+3. If applicable, provide brief, actionable instructions/guidance for anyone who wants to fix or address the issue.
+4. Perform automated triage classification based on the issue content:
+   - Match and select the most relevant labels from the available repository labels provided.
+   - Estimate the priority (P0: Blocker/Critical/Urgent, P1: High, P2: Medium/Normal, P3: Low/Minor).
+   - Estimate the scope/size (XS: Tiny/Trivial, S: Small, M: Medium, L: Large, XL: Very Large/Epic).
+   - If candidate milestones are provided, select the best matching milestone.
+   - If candidate repository issues (open or closed) are provided, check for duplicates and relationships:
+     * DUPLICATE_OF: If you are DEFINITIVELY CERTAIN that this issue reports the exact same underlying bug, defect, feature, or request as an existing issue (open or closed), specify its issue number (e.g., #12). Do NOT mark as duplicate if it merely relates to the same topic or module; mark duplicate ONLY when you are confident it is an exact duplicate. Otherwise, output 'NONE'.
+     * RELATED: Issues that touch the same area, component, or workflow.
+     * BLOCKED_BY: Existing open issues that must be solved before this issue can be completed.
+     * BLOCKING: Existing open issues that cannot be completed until this issue is solved.
+     * PARENT_ISSUE: An existing open epic/parent issue that this issue is a sub-issue of.
 
-STRICT CONSTRAINTS:
-1. STRICTLY NO NEW CONTENT: Do NOT hallucinate, invent, or assume any new facts, symptoms, reproduction steps, technical solutions, error logs, environment details, or requirements that the user did not explicitly state or provide.
-2. DO NOT GUESS SOLUTIONS: If the author only describes a bug or an idea, do not invent code fixes or technical architectures unless the author explicitly proposed them.
-3. REWORD FOR CLARITY: Turn informal, rushed, shorthand, or fragmented sentences into articulate, grammatical, and professional technical English.
-4. EXPAND STRUCTURALLY: Reorganize messy, brief, or unstructured thoughts into clean markdown sections (e.g., Summary / Overview, Details, Observed Context / Notes) without adding unmentioned information.
-5. PRESERVE ORIGINAL ARTIFACTS: Preserve all code snippets, terminal commands, stack traces, URLs, file paths, versions, and usernames VERBATIM in appropriate markdown code blocks.
-6. OUTPUT ONLY MARKDOWN: Return strictly the formatted markdown text for the issue description. Do not wrap in conversational chit-chat, meta explanations, or greetings.`;
+STRICT CONSTRAINTS FOR THE ISSUE BODY:
+1. STRICTLY NO NEW CONTENT IN ISSUE BODY: Do NOT hallucinate, invent, or assume any new facts, symptoms, reproduction steps, technical solutions, error logs, environment details, or requirements that the author did not explicitly state or provide.
+2. REWORD FOR CLARITY: Turn informal, rushed, shorthand, or fragmented sentences into articulate, grammatical, and professional technical English.
+3. EXPAND STRUCTURALLY: Reorganize messy, brief, or unstructured thoughts into clean markdown sections (e.g., Summary / Overview, Details, Observed Context / Notes) without adding unmentioned information.
+4. PRESERVE ORIGINAL ARTIFACTS: Preserve all code snippets, terminal commands, stack traces, URLs, file paths, versions, and usernames VERBATIM in appropriate markdown code blocks.
+
+GUIDELINES FOR FIX INSTRUCTIONS:
+1. APPLICABILITY: Only provide fix instructions if the issue represents an actionable bug, defect, feature request, or technical task where reasonable, practical guidance can be derived from the issue description.
+2. WHEN NOT APPLICABLE: If the issue is a general question, open-ended discussion, announcement, duplicate, invalid/incomprehensible, or completely lacks sufficient technical context to give meaningful guidance, you MUST output strictly "NOT_APPLICABLE" under FIX_INSTRUCTIONS.
+3. BRIEF & ACTIONABLE: When applicable, keep instructions concise (bulleted steps, typically 2-4 points). Focus on:
+   - Probable area or component to inspect based on the context.
+   - Key steps or considerations for a contributor to implement the fix.
+   - How to test or verify the resolution.
+4. TONE: Direct, helpful, and targeted at a developer or contributor wanting to resolve the issue.
+
+TRIAGE CLASSIFICATION GUIDELINES:
+- LABELS: Pick only labels that accurately describe the type, component, or status based on available labels.
+- PRIORITY: Assign P0 for crashes/data loss/security, P1 for major broken functionality, P2 for normal bugs/features, P3 for typos/minor enhancements.
+- SIZE: XS (1-line / simple fix), S (small self-contained fix), M (standard feature/bug fix), L (multi-component change), XL (large architectural refactor).
+- DUPLICATES: Only output an issue number if you are strictly certain. False positive duplicate closures frustrate users; when in doubt, leave DUPLICATE_OF as 'NONE' and list under RELATED_ISSUES instead.
+- RELATIONSHIPS: Only reference issue numbers from the provided Candidate Issues list if there is a clear, meaningful connection. If no issues apply, output 'NONE'.`;
 var DEFAULT_MODELS = [
   process.env.GEMINI_MODEL,
   "gemini-3.1-flash-lite",
-  "gemini-3.1-flash-lite-preview",
-  "gemini-2.5-flash-lite",
-  "gemini-2.0-flash-lite",
-  "gemini-1.5-flash"
+  "gemini-3.1-flash-lite-preview"
 ].filter(Boolean);
-async function enhanceIssue(title, body) {
+function normalizeFixInstructions(text) {
+  if (!text) return null;
+  const trimmed = text.trim();
+  const cleaned = trimmed.replace(/^[\s*_-]+|[\s*_-]+$/g, "");
+  const lower2 = cleaned.toLowerCase();
+  if (!lower2 || lower2 === "not_applicable" || lower2 === "not applicable" || lower2 === "not applicable." || lower2 === "n/a" || lower2 === "none" || lower2 === "none." || lower2.startsWith("not_applicable") || lower2.startsWith("not applicable")) {
+    return null;
+  }
+  return trimmed;
+}
+function parseGeminiResponse(rawText, enhanceTitle = false) {
+  let isThorough = false;
+  let enhancedTitle = null;
+  let enhancedBody = rawText;
+  let fixInstructions = null;
+  let recommendedLabels = [];
+  let estimatedPriority = null;
+  let estimatedSize = null;
+  let recommendedMilestone = null;
+  let duplicateOf = null;
+  let relatedIssues = [];
+  let blockedByIssues = [];
+  let blockingIssues = [];
+  let parentIssue = null;
+  const thoroughMatch = rawText.match(/===IS_THOROUGH===\s*([\s\S]*?)(?====ENHANCED_TITLE===|===ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  if (thoroughMatch && thoroughMatch[1].trim()) {
+    isThorough = thoroughMatch[1].trim().toUpperCase().startsWith("YES");
+  }
+  const titleMatch = rawText.match(/===ENHANCED_TITLE===\s*([\s\S]*?)(?====ENHANCED_BODY===|===FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const bodyMatch = rawText.match(/===ENHANCED_BODY===\s*([\s\S]*?)(?====FIX_INSTRUCTIONS===|===RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const fixMatch = rawText.match(/===FIX_INSTRUCTIONS===\s*([\s\S]*?)(?====RECOMMENDED_LABELS===|===ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const labelsMatch = rawText.match(/===RECOMMENDED_LABELS===\s*([\s\S]*?)(?====ESTIMATED_PRIORITY===|===ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const priorityMatch = rawText.match(/===ESTIMATED_PRIORITY===\s*([\s\S]*?)(?====ESTIMATED_SIZE===|===RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const sizeMatch = rawText.match(/===ESTIMATED_SIZE===\s*([\s\S]*?)(?====RECOMMENDED_MILESTONE===|===DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const milestoneMatch = rawText.match(/===RECOMMENDED_MILESTONE===\s*([\s\S]*?)(?====DUPLICATE_OF===|===RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const duplicateMatch = rawText.match(/===DUPLICATE_OF===\s*([\s\S]*?)(?====RELATED_ISSUES===|===BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const relatedMatch = rawText.match(/===RELATED_ISSUES===\s*([\s\S]*?)(?====BLOCKED_BY_ISSUES===|===BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const blockedByMatch = rawText.match(/===BLOCKED_BY_ISSUES===\s*([\s\S]*?)(?====BLOCKING_ISSUES===|===PARENT_ISSUE===|$)/i);
+  const blockingMatch = rawText.match(/===BLOCKING_ISSUES===\s*([\s\S]*?)(?====PARENT_ISSUE===|$)/i);
+  const parentMatch = rawText.match(/===PARENT_ISSUE===\s*([\s\S]*?)$/i);
+  if (enhanceTitle && titleMatch && titleMatch[1].trim()) {
+    enhancedTitle = titleMatch[1].trim();
+  }
+  if (bodyMatch && bodyMatch[1].trim()) {
+    enhancedBody = bodyMatch[1].trim();
+  } else if (!bodyMatch && (titleMatch || fixMatch)) {
+    let cleaned = rawText;
+    if (thoroughMatch) cleaned = cleaned.replace(thoroughMatch[0], "");
+    if (titleMatch) cleaned = cleaned.replace(titleMatch[0], "");
+    if (fixMatch) cleaned = cleaned.replace(fixMatch[0], "");
+    if (labelsMatch) cleaned = cleaned.replace(labelsMatch[0], "");
+    if (priorityMatch) cleaned = cleaned.replace(priorityMatch[0], "");
+    if (sizeMatch) cleaned = cleaned.replace(sizeMatch[0], "");
+    if (milestoneMatch) cleaned = cleaned.replace(milestoneMatch[0], "");
+    if (duplicateMatch) cleaned = cleaned.replace(duplicateMatch[0], "");
+    if (relatedMatch) cleaned = cleaned.replace(relatedMatch[0], "");
+    if (blockedByMatch) cleaned = cleaned.replace(blockedByMatch[0], "");
+    if (blockingMatch) cleaned = cleaned.replace(blockingMatch[0], "");
+    if (parentMatch) cleaned = cleaned.replace(parentMatch[0], "");
+    enhancedBody = cleaned.trim();
+  } else if (!bodyMatch && !titleMatch && !fixMatch) {
+    const legacyMatch = rawText.match(/^TITLE:\s*(.+?)(?:\r?\n)+BODY:\s*([\s\S]+)$/i);
+    if (legacyMatch) {
+      if (enhanceTitle) enhancedTitle = legacyMatch[1].trim();
+      enhancedBody = legacyMatch[2].trim();
+    }
+  }
+  if (fixMatch && fixMatch[1].trim()) {
+    fixInstructions = normalizeFixInstructions(fixMatch[1]);
+  }
+  if (labelsMatch && labelsMatch[1].trim()) {
+    const rawLabels = labelsMatch[1].trim();
+    if (rawLabels.toLowerCase() !== "none") {
+      recommendedLabels = rawLabels.split(",").map((l) => l.trim().replace(/^["'`]|["'`]$/g, "")).filter((l) => l && l.toLowerCase() !== "none");
+    }
+  }
+  if (priorityMatch && priorityMatch[1].trim()) {
+    const p = priorityMatch[1].trim().toUpperCase();
+    if (["P0", "P1", "P2", "P3"].includes(p)) {
+      estimatedPriority = p;
+    } else {
+      const matchP = p.match(/\b(P[0-3]|CRITICAL|HIGH|MEDIUM|LOW)\b/i);
+      if (matchP) estimatedPriority = matchP[1].toUpperCase();
+    }
+  }
+  if (sizeMatch && sizeMatch[1].trim()) {
+    const s2 = sizeMatch[1].trim().toUpperCase();
+    if (["XS", "S", "M", "L", "XL"].includes(s2)) {
+      estimatedSize = s2;
+    } else {
+      const matchS = s2.match(/\b(XS|S|M|L|XL|SMALL|MEDIUM|LARGE)\b/i);
+      if (matchS) estimatedSize = matchS[1].toUpperCase();
+    }
+  }
+  if (milestoneMatch && milestoneMatch[1].trim()) {
+    const m2 = milestoneMatch[1].trim();
+    if (m2.toLowerCase() !== "none" && m2.toLowerCase() !== "n/a") {
+      recommendedMilestone = m2;
+    }
+  }
+  if (duplicateMatch && duplicateMatch[1].trim()) {
+    const dText = duplicateMatch[1].trim();
+    if (dText.toLowerCase() !== "none" && dText.toLowerCase() !== "n/a") {
+      const dNumMatch = dText.match(/(?:#)?(\d+)/);
+      if (dNumMatch) {
+        duplicateOf = parseInt(dNumMatch[1], 10);
+      }
+    }
+  }
+  const parseIssueList = (match2) => {
+    if (!match2 || !match2[1].trim()) return [];
+    const text = match2[1].trim();
+    if (text.toLowerCase() === "none" || text.toLowerCase() === "n/a") return [];
+    const nums = [];
+    const matches = text.matchAll(/(?:#)?(\d+)/g);
+    for (const m2 of matches) {
+      const n = parseInt(m2[1], 10);
+      if (!isNaN(n) && !nums.includes(n)) nums.push(n);
+    }
+    return nums;
+  };
+  relatedIssues = parseIssueList(relatedMatch);
+  blockedByIssues = parseIssueList(blockedByMatch);
+  blockingIssues = parseIssueList(blockingMatch);
+  if (parentMatch && parentMatch[1].trim()) {
+    const pText = parentMatch[1].trim();
+    if (pText.toLowerCase() !== "none" && pText.toLowerCase() !== "n/a") {
+      const pNumMatch = pText.match(/(?:#)?(\d+)/);
+      if (pNumMatch) {
+        parentIssue = parseInt(pNumMatch[1], 10);
+      }
+    }
+  }
+  return {
+    isThorough,
+    enhancedTitle,
+    enhancedBody,
+    fixInstructions,
+    recommendedLabels,
+    estimatedPriority,
+    estimatedSize,
+    recommendedMilestone,
+    duplicateOf,
+    relatedIssues,
+    blockedByIssues,
+    blockingIssues,
+    parentIssue
+  };
+}
+async function enhanceIssue(title, body, options = {}) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY environment variable is missing.");
   }
   const ai = new GoogleGenAI2({ apiKey });
-  const prompt = `Please reword and format the following GitHub issue for clarity, readability, and structure. Do not add any new facts, assumptions, reproduction steps, or content that was not in the original issue.
+  const customInstruction = options.customInstruction || "";
+  const temperature = typeof options.temperature === "number" && !isNaN(options.temperature) ? options.temperature : 0.2;
+  const enhanceTitle = Boolean(options.enhanceTitle);
+  const availableLabels = Array.isArray(options.availableLabels) ? options.availableLabels : [];
+  const candidateMilestones = Array.isArray(options.candidateMilestones) ? options.candidateMilestones : [];
+  const candidateIssues = Array.isArray(options.candidateIssues) ? options.candidateIssues : [];
+  let systemInstruction = SYSTEM_INSTRUCTION;
+  if (customInstruction.trim()) {
+    systemInstruction += `
+
+ADDITIONAL USER GUIDELINES:
+${customInstruction.trim()}`;
+  }
+  const labelsContext = availableLabels.length > 0 ? `Available Repository Labels (choose only the most relevant ones):
+${availableLabels.join(", ")}` : `(No predefined labels available. If applicable, recommend standard labels like bug, documentation, enhancement, etc.)`;
+  const milestonesContext = candidateMilestones.length > 0 ? `Candidate Open Milestones:
+${candidateMilestones.join(", ")}` : `(No open milestones available)`;
+  const issuesContext = candidateIssues.length > 0 ? `Candidate Repository Issues (open and recently closed):
+${candidateIssues.map((iss) => `#${iss.number} [${(iss.state || "open").toUpperCase()}]: ${iss.title}${iss.body ? ` - ${iss.body.slice(0, 140).replace(/\r?\n/g, " ")}...` : ""}`).join("\n")}` : `(No other issues in repository)`;
+  const titleSection = enhanceTitle ? `===ENHANCED_TITLE===
+<rewritten clear, concise, and professional issue title>
+
+` : "";
+  const prompt = `Please evaluate the thoroughness of the following GitHub issue, reword and format the issue description for clarity and structure, provide brief fix instructions if applicable, and determine triage metadata (labels, priority, size, milestone, duplicate status, and issue relationships).
+
+${labelsContext}
+${milestonesContext}
+${issuesContext}
+
+Return your response strictly in the following format with the exact delimiter tags:
+
+===IS_THOROUGH===
+<strictly 'YES' if the original issue description is already thorough and well-explained on its own (contains more than 2 well-written descriptive paragraphs or equivalent clear structure); otherwise strictly 'NO'>
+
+${titleSection}===ENHANCED_BODY===
+<rewritten markdown issue description without adding new facts or assumptions>
+
+===FIX_INSTRUCTIONS===
+<brief, practical instructions for anyone who wants to fix this issue, OR strictly 'NOT_APPLICABLE' if instructions are not applicable or if there is insufficient context>
+
+===RECOMMENDED_LABELS===
+<comma-separated list of 1-3 matching labels from the available repository labels, or 'NONE'>
+
+===ESTIMATED_PRIORITY===
+<strictly one of: 'P0', 'P1', 'P2', 'P3'>
+
+===ESTIMATED_SIZE===
+<strictly one of: 'XS', 'S', 'M', 'L', 'XL'>
+
+===RECOMMENDED_MILESTONE===
+<exact name of matching milestone from Candidate Open Milestones, or 'NONE'>
+
+===DUPLICATE_OF===
+<issue number from Candidate Repository Issues if you are STRICTLY and DEFINITIVELY CERTAIN this issue is an exact duplicate of an existing open or closed issue, e.g. #12, otherwise strictly 'NONE'>
+
+===RELATED_ISSUES===
+<comma-separated list of issue numbers from Candidate Repository Issues that are related, e.g. #12, #34, or 'NONE'>
+
+===BLOCKED_BY_ISSUES===
+<comma-separated list of issue numbers from Candidate Repository Issues that block this issue, e.g. #12, or 'NONE'>
+
+===BLOCKING_ISSUES===
+<comma-separated list of issue numbers from Candidate Repository Issues that are blocked by this issue, e.g. #34, or 'NONE'>
+
+===PARENT_ISSUE===
+<issue number of candidate parent/epic issue that this issue belongs to as a sub-issue, e.g. #56, or 'NONE'>
 
 Issue Title: ${title || "(No title provided)"}
 
 Issue Content:
 ${body || "(No description provided)"}`;
-  const candidateModels = Array.from(new Set(DEFAULT_MODELS));
+  const candidateModels = Array.from(
+    new Set([options.model, ...DEFAULT_MODELS].filter(Boolean))
+  );
   let lastError = null;
   for (const model of candidateModels) {
     try {
-      console.log(`[Gemini] Attempting generation with model: ${model}`);
+      console.log(`[Gemini] Attempting generation with model: ${model} (temperature: ${temperature})`);
       const response = await ai.models.generateContent({
         model,
         contents: prompt,
         config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.2
-          // Low temperature for high fidelity and zero hallucinations
+          systemInstruction,
+          temperature
         }
       });
       if (response && response.text) {
-        console.log(`[Gemini] Successfully formatted issue using model: ${model}`);
+        const rawText = response.text.trim();
+        console.log(`[Gemini] Successfully formatted issue and generated triage metadata with model: ${model}`);
+        const parsed = parseGeminiResponse(rawText, enhanceTitle);
         return {
-          enhancedBody: response.text.trim(),
+          isThorough: parsed.isThorough,
+          enhancedTitle: parsed.enhancedTitle,
+          enhancedBody: parsed.enhancedBody,
+          fixInstructions: parsed.fixInstructions,
+          recommendedLabels: parsed.recommendedLabels,
+          estimatedPriority: parsed.estimatedPriority,
+          estimatedSize: parsed.estimatedSize,
+          recommendedMilestone: parsed.recommendedMilestone,
+          duplicateOf: parsed.duplicateOf,
+          relatedIssues: parsed.relatedIssues,
+          blockedByIssues: parsed.blockedByIssues,
+          blockingIssues: parsed.blockingIssues,
+          parentIssue: parsed.parentIssue,
           modelUsed: model
         };
       }
@@ -46353,7 +46704,7 @@ ${body || "(No description provided)"}`;
       lastError = err;
     }
   }
-  throw new Error(`All Gemini models failed. Last error: ${lastError?.message || "Unknown error"}`);
+  throw new Error(`All Gemini models failed. Last error: ${lastError?.message}`);
 }
 
 // node_modules/universal-user-agent/index.js
@@ -46455,7 +46806,7 @@ function bindApi(hook2, state, name) {
   });
 }
 function Singular() {
-  const singularHookName = /* @__PURE__ */ Symbol("Singular");
+  const singularHookName = Symbol("Singular");
   const singularHookState = {
     registry: {}
   };
@@ -49903,20 +50254,762 @@ var Octokit2 = Octokit.plugin(requestLog, legacyRestEndpointMethods, paginateRes
   }
 );
 
+// src/projects.js
+import { execSync } from "child_process";
+function detectTokenKind(token) {
+  if (!token) return "none";
+  if (token.startsWith("ghs_")) return "actions_runner_token";
+  if (token.startsWith("github_pat_")) return "fine_grained_pat";
+  if (token.startsWith("ghp_")) return "classic_pat";
+  return "custom";
+}
+function describeTokenKind(token) {
+  const kind = detectTokenKind(token);
+  switch (kind) {
+    case "none":
+      return "None (empty)";
+    case "actions_runner_token":
+      return "GitHub Actions default runner token (GITHUB_TOKEN / ghs_...)";
+    case "fine_grained_pat":
+      return "Fine-Grained Personal Access Token (github_pat_...)";
+    case "classic_pat":
+      return "Classic Personal Access Token (ghp_...)";
+    default:
+      return `Custom Token (length: ${token.length})`;
+  }
+}
+function parseProjectIdentifier(projectUrl, projectNumber, projectOwner) {
+  if (projectUrl && typeof projectUrl === "string") {
+    const trimmed = projectUrl.trim();
+    const orgMatch = trimmed.match(/github\.com\/orgs\/([^/]+)\/projects\/(\d+)/i);
+    if (orgMatch) {
+      return { ownerType: "org", owner: orgMatch[1], number: parseInt(orgMatch[2], 10) };
+    }
+    const userMatch = trimmed.match(/github\.com\/users\/([^/]+)\/projects\/(\d+)/i);
+    if (userMatch) {
+      return { ownerType: "user", owner: userMatch[1], number: parseInt(userMatch[2], 10) };
+    }
+    const shortMatch = trimmed.match(/^([^/]+)\/(\d+)$/);
+    if (shortMatch) {
+      return { ownerType: "unknown", owner: shortMatch[1], number: parseInt(shortMatch[2], 10) };
+    }
+  }
+  if (projectNumber && projectOwner) {
+    const num = parseInt(projectNumber, 10);
+    if (!isNaN(num)) {
+      return { ownerType: "unknown", owner: String(projectOwner).trim(), number: num };
+    }
+  }
+  return null;
+}
+async function getProjectV2Details(octokit, { ownerType, owner, number }) {
+  const queryOrg = `
+    query getOrgProject($owner: String!, $number: Int!) {
+      organization(login: $owner) {
+        projectV2(number: $number) {
+          id
+          title
+          fields(first: 50) {
+            nodes {
+              ... on ProjectV2Field {
+                id
+                name
+                dataType
+              }
+              ... on ProjectV2SingleSelectField {
+                id
+                name
+                dataType
+                options {
+                  id
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+  const queryUser = `
+    query getUserProject($owner: String!, $number: Int!) {
+      user(login: $owner) {
+        projectV2(number: $number) {
+          id
+          title
+          fields(first: 50) {
+            nodes {
+              ... on ProjectV2Field {
+                id
+                name
+                dataType
+              }
+              ... on ProjectV2SingleSelectField {
+                id
+                name
+                dataType
+                options {
+                  id
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+  let project = null;
+  if (ownerType === "org") {
+    const res = await octokit.graphql(queryOrg, { owner, number });
+    project = res?.organization?.projectV2;
+  } else if (ownerType === "user") {
+    const res = await octokit.graphql(queryUser, { owner, number });
+    project = res?.user?.projectV2;
+  } else {
+    try {
+      const res = await octokit.graphql(queryOrg, { owner, number });
+      project = res?.organization?.projectV2;
+    } catch {
+      const res = await octokit.graphql(queryUser, { owner, number });
+      project = res?.user?.projectV2;
+    }
+  }
+  if (!project) {
+    throw new Error(`Project #${number} not found for owner "${owner}". Verify project number and permissions.`);
+  }
+  const fields = (project.fields?.nodes || []).filter(Boolean);
+  return {
+    id: project.id,
+    title: project.title,
+    fields
+  };
+}
+function matchSelectOption(options, targetValue) {
+  if (!Array.isArray(options) || !targetValue) return null;
+  const target = targetValue.trim().toLowerCase();
+  const exact = options.find((o) => o.name.toLowerCase() === target);
+  if (exact) return exact.id;
+  const prefixMatch = options.find((o) => {
+    const optLower = o.name.toLowerCase();
+    return optLower.startsWith(target) || target.startsWith(optLower);
+  });
+  if (prefixMatch) return prefixMatch.id;
+  const statusGroups = [
+    ["backlog", "inbox", "to do", "todo", "new", "triage", "open"],
+    ["ready", "ready for dev", "next up"],
+    ["in progress", "active", "doing", "started"],
+    ["in review", "review", "pr", "testing"],
+    ["done", "closed", "complete", "finished"]
+  ];
+  const matchedStatusGroup = statusGroups.find(
+    (grp) => grp.some((term) => target === term || target.includes(term) || term.includes(target))
+  );
+  if (matchedStatusGroup) {
+    const statusMatch = options.find((o) => {
+      const optLower = o.name.toLowerCase();
+      return matchedStatusGroup.some(
+        (term) => optLower === term || optLower.includes(term) || term.includes(optLower)
+      );
+    });
+    if (statusMatch) return statusMatch.id;
+  }
+  const priorityGroups = [
+    ["p0", "critical", "urgent", "highest", "blocker"],
+    ["p1", "high", "important"],
+    ["p2", "medium", "normal", "moderate"],
+    ["p3", "low", "lowest", "minor"]
+  ];
+  const matchedPriGroup = priorityGroups.find(
+    (grp) => grp.some((term) => target.includes(term) || term.includes(target))
+  );
+  if (matchedPriGroup) {
+    const groupMatch = options.find((o) => {
+      const optLower = o.name.toLowerCase();
+      return matchedPriGroup.some((term) => optLower.includes(term) || term.includes(optLower));
+    });
+    if (groupMatch) return groupMatch.id;
+  }
+  const sizeGroups = [
+    ["xs", "tiny", "trivial", "extra small"],
+    ["s", "small"],
+    ["m", "medium", "standard"],
+    ["l", "large"],
+    ["xl", "extra large", "epic"]
+  ];
+  const matchedSizeGroup = sizeGroups.find(
+    (grp) => grp.some((term) => target === term || target.startsWith(term))
+  );
+  if (matchedSizeGroup) {
+    const sizeMatch = options.find((o) => {
+      const optLower = o.name.toLowerCase();
+      return matchedSizeGroup.some((term) => optLower === term || optLower.startsWith(term));
+    });
+    if (sizeMatch) return sizeMatch.id;
+  }
+  return null;
+}
+function findProjectField(fields, targetName, aliases = []) {
+  if (!Array.isArray(fields) || !targetName) return null;
+  const targetLower = targetName.trim().toLowerCase();
+  const exact = fields.find((f3) => f3.name.toLowerCase() === targetLower);
+  if (exact) return exact;
+  for (const alias of aliases) {
+    const aLower = alias.toLowerCase();
+    const aliasMatch = fields.find((f3) => f3.name.toLowerCase() === aLower);
+    if (aliasMatch) return aliasMatch;
+  }
+  return fields.find((f3) => f3.name.toLowerCase().includes(targetLower)) || null;
+}
+async function assignIssueToProject({
+  token,
+  issueNodeId,
+  repository,
+  issueNumber,
+  projectUrl,
+  projectNumber,
+  projectOwner,
+  status = "Backlog",
+  statusFieldName = "Status",
+  priority,
+  size,
+  priorityFieldName = "Priority",
+  sizeFieldName = "Size"
+}) {
+  if (!token) {
+    console.warn("[Project] Warning: No token provided for project assignment. Skipping.");
+    return null;
+  }
+  const projectIdent = parseProjectIdentifier(projectUrl, projectNumber, projectOwner);
+  if (!projectIdent) {
+    console.warn("[Project] Warning: Invalid project configuration. Provide a valid project URL or owner/number.");
+    return null;
+  }
+  const tokenKind = detectTokenKind(token);
+  console.log(`[Project] Authentication token detected: ${describeTokenKind(token)}.`);
+  if (projectIdent.ownerType === "user" && tokenKind === "actions_runner_token") {
+    console.warn(
+      `[Project] Warning: Target project "${projectIdent.owner}/${projectIdent.number}" is a User-level Project. Default GitHub Actions runner token (GITHUB_TOKEN) does not have permission to modify user-owned projects. Ensure secret 'PROJECT_TOKEN' is set in repository settings with a Classic PAT (project scope).`
+    );
+  }
+  try {
+    const octokit = new Octokit2({ auth: token });
+    console.log(`[Project] Locating GitHub Project #${projectIdent.number} (${projectIdent.owner})...`);
+    const projectDetails = await getProjectV2Details(octokit, projectIdent);
+    console.log(`[Project] Found project "${projectDetails.title}" (ID: ${projectDetails.id}).`);
+    const availableFieldSummaries = projectDetails.fields.map((f3) => {
+      if (f3.dataType === "SINGLE_SELECT" && f3.options) {
+        return `${f3.name} [${f3.dataType}: ${f3.options.map((o) => o.name).join(", ")}]`;
+      }
+      return `${f3.name} [${f3.dataType}]`;
+    });
+    console.log(`[Project] Available project fields: ${availableFieldSummaries.join(" | ")}`);
+    let itemId = null;
+    if (repository && issueNumber) {
+      try {
+        const issueUrl = `https://github.com/${repository}/issues/${issueNumber}`;
+        console.log(`[Project] Attempting to add issue to project via GitHub CLI ('gh project item-add')...`);
+        const stdout = execSync(
+          `gh project item-add ${projectIdent.number} --owner "${projectIdent.owner}" --url "${issueUrl}" --format json`,
+          {
+            encoding: "utf8",
+            env: { ...process.env, GH_TOKEN: token, GITHUB_TOKEN: token },
+            stdio: ["pipe", "pipe", "pipe"]
+          }
+        );
+        const parsed = JSON.parse(stdout);
+        if (parsed?.id) {
+          itemId = parsed.id;
+          console.log(`[Project] Successfully added issue to project via GitHub CLI (Item ID: ${itemId}).`);
+        }
+      } catch (cliErr) {
+        const cliMsg = (cliErr.stderr || cliErr.message || "").trim();
+        console.log(`[Project] Note: GitHub CLI item-add returned: ${cliMsg || "error"}. Attempting GraphQL mutation...`);
+      }
+    }
+    if (!itemId) {
+      const addItemMutation = `
+        mutation addItem($projectId: ID!, $contentId: ID!) {
+          addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+            item {
+              id
+            }
+          }
+        }
+      `;
+      console.log(`[Project] Adding issue to project "${projectDetails.title}" via GraphQL mutation...`);
+      const addResult = await octokit.graphql(addItemMutation, {
+        projectId: projectDetails.id,
+        contentId: issueNodeId
+      });
+      itemId = addResult?.addProjectV2ItemById?.item?.id;
+    }
+    if (!itemId) {
+      console.warn("[Project] Warning: Failed to obtain project item ID after adding issue.");
+      return null;
+    }
+    console.log(`[Project] Successfully added issue to project (Item ID: ${itemId}).`);
+    const updateFieldMutation = `
+      mutation updateField($input: UpdateProjectV2ItemFieldValueInput!) {
+        updateProjectV2ItemFieldValue(input: $input) {
+          projectV2Item {
+            id
+          }
+        }
+      }
+    `;
+    const setFieldValue = async (fieldId, value) => {
+      return octokit.graphql(updateFieldMutation, {
+        input: {
+          projectId: projectDetails.id,
+          itemId,
+          fieldId,
+          value
+        }
+      });
+    };
+    const targetStatus = status || "Backlog";
+    const statusField = findProjectField(projectDetails.fields, statusFieldName, ["Status", "State"]);
+    if (statusField) {
+      if (statusField.dataType === "SINGLE_SELECT" && statusField.options) {
+        const optionId = matchSelectOption(statusField.options, targetStatus);
+        if (optionId) {
+          const matchedOpt = statusField.options.find((o) => o.id === optionId);
+          await setFieldValue(statusField.id, { singleSelectOptionId: optionId });
+          console.log(`[Project] Set ${statusField.name} to "${matchedOpt?.name || targetStatus}".`);
+        } else {
+          console.log(
+            `[Project] Status "${targetStatus}" did not match available options for ${statusField.name} (${statusField.options.map((o) => o.name).join(", ")}).`
+          );
+        }
+      } else if (statusField.dataType === "TEXT") {
+        await setFieldValue(statusField.id, { text: targetStatus });
+        console.log(`[Project] Set ${statusField.name} text to "${targetStatus}".`);
+      }
+    } else {
+      console.log(`[Project] Field "${statusFieldName}" not found on project. Skipping status attribute.`);
+    }
+    if (priority) {
+      const pField = findProjectField(projectDetails.fields, priorityFieldName, ["Priority", "Severity", "Urgency"]);
+      if (pField) {
+        if (pField.dataType === "SINGLE_SELECT" && pField.options) {
+          const optionId = matchSelectOption(pField.options, priority);
+          if (optionId) {
+            const matchedOpt = pField.options.find((o) => o.id === optionId);
+            await setFieldValue(pField.id, { singleSelectOptionId: optionId });
+            console.log(`[Project] Set ${pField.name} to "${matchedOpt?.name || priority}".`);
+          } else {
+            console.log(
+              `[Project] Option "${priority}" did not match available ${pField.name} options (${pField.options.map((o) => o.name).join(", ")}).`
+            );
+          }
+        } else if (pField.dataType === "TEXT") {
+          await setFieldValue(pField.id, { text: priority });
+          console.log(`[Project] Set ${pField.name} text to "${priority}".`);
+        }
+      } else {
+        console.log(`[Project] Field "${priorityFieldName}" not found on project. Skipping priority attribute.`);
+      }
+    } else {
+      console.log(`[Project] No estimated priority provided. Skipping priority attribute.`);
+    }
+    if (size) {
+      const sField = findProjectField(projectDetails.fields, sizeFieldName, ["Size", "Estimate", "Complexity"]);
+      if (sField) {
+        if (sField.dataType === "SINGLE_SELECT" && sField.options) {
+          const optionId = matchSelectOption(sField.options, size);
+          if (optionId) {
+            const matchedOpt = sField.options.find((o) => o.id === optionId);
+            await setFieldValue(sField.id, { singleSelectOptionId: optionId });
+            console.log(`[Project] Set ${sField.name} to "${matchedOpt?.name || size}".`);
+          } else {
+            console.log(
+              `[Project] Option "${size}" did not match available ${sField.name} options (${sField.options.map((o) => o.name).join(", ")}).`
+            );
+          }
+        } else if (sField.dataType === "TEXT") {
+          await setFieldValue(sField.id, { text: size });
+          console.log(`[Project] Set ${sField.name} text to "${size}".`);
+        }
+      } else {
+        console.log(`[Project] Field "${sizeFieldName}" not found on project. Skipping size attribute.`);
+      }
+    } else {
+      console.log(`[Project] No estimated size provided. Skipping size attribute.`);
+    }
+    return { itemId };
+  } catch (err) {
+    if (err.message && err.message.includes("Resource not accessible by integration")) {
+      if (tokenKind === "fine_grained_pat") {
+        console.warn(
+          `[Project] Warning: A Fine-Grained Personal Access Token (github_pat_...) was provided. GitHub currently does NOT support Fine-Grained PATs for user-owned Projects (v2) like "${projectIdent.owner}/${projectIdent.number}". To fix this, create a Classic Personal Access Token (ghp_...) with the 'project' scope, save it as secret 'PROJECT_TOKEN', and set 'project-token: \${{ secrets.PROJECT_TOKEN }}'.`
+        );
+      } else if (tokenKind === "actions_runner_token") {
+        console.warn(
+          `[Project] Warning: GitHub Actions default GITHUB_TOKEN cannot write to User-level Projects (${projectIdent.owner}). To add issues to user projects, create a Classic Personal Access Token (PAT) with 'project' scope, add it as repository secret 'PROJECT_TOKEN' in repository "${repository || "target repository"}", and set 'project-token: \${{ secrets.PROJECT_TOKEN }}' in the workflow.`
+        );
+      } else {
+        console.warn(
+          `[Project] Warning: Permission denied ("Resource not accessible by integration") for user project "${projectIdent.owner}/${projectIdent.number}". Verify that the token has the 'project' scope (and 'repo' scope) checked in GitHub Developer Settings.`
+        );
+      }
+    } else {
+      console.warn(`[Project] Warning: Failed to assign issue to project:`, err.message);
+    }
+    return null;
+  }
+}
+
 // src/github.js
 var ENHANCED_MARKER = "<!-- gemini-enhanced -->";
 function isAlreadyEnhanced(body) {
   if (!body) return false;
   return body.includes(ENHANCED_MARKER);
 }
+function extractRawIssueContent(body) {
+  if (!body) return "";
+  const detailsMatch = body.match(
+    /<details>\s*<summary>[\s\S]*?Original Submission[\s\S]*?<\/summary>\s*([\s\S]*?)\s*<\/details>/i
+  );
+  if (detailsMatch && detailsMatch[1] && detailsMatch[1].trim() && detailsMatch[1].trim() !== "*(Original body was empty)*") {
+    return detailsMatch[1].trim();
+  }
+  let cleaned = body.replace(/<!--\s*gemini-enhanced\s*-->/gi, "").replace(/>\s*\[!NOTE\][\s\S]*?Original raw submission is preserved below\.\s*/gi, "").trim();
+  return cleaned || body;
+}
+async function addCommentReaction({ token, repository, commentId, content }) {
+  if (!token || !repository || !commentId || !content) return;
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    await octokit.rest.reactions.createForIssueComment({
+      owner,
+      repo,
+      comment_id: parseInt(commentId, 10),
+      content
+    });
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not add reaction '${content}' to comment #${commentId}:`, err.message);
+  }
+}
+async function fetchRepositoryLabels({ token, repository }) {
+  if (!token || !repository) return [];
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    const { data } = await octokit.rest.issues.listLabelsForRepo({
+      owner,
+      repo,
+      per_page: 100
+    });
+    return data.map((l) => l.name);
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not fetch repository labels:`, err.message);
+    return [];
+  }
+}
+async function fetchRepositoryMilestones({ token, repository }) {
+  if (!token || !repository) return [];
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    const { data } = await octokit.rest.issues.listMilestones({
+      owner,
+      repo,
+      state: "open",
+      per_page: 50
+    });
+    return data.map((m2) => ({ id: m2.id, number: m2.number, title: m2.title }));
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not fetch repository milestones:`, err.message);
+    return [];
+  }
+}
+async function fetchOpenIssues({ token, repository, excludeIssueNumber, limit = 50 }) {
+  if (!token || !repository) return [];
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    const { data } = await octokit.rest.issues.listForRepo({
+      owner,
+      repo,
+      state: "all",
+      sort: "updated",
+      direction: "desc",
+      per_page: Math.min(limit, 100)
+    });
+    const currentNum = parseInt(excludeIssueNumber, 10);
+    const candidateIssues = data.filter((item) => !item.pull_request && item.number !== currentNum).slice(0, limit);
+    return candidateIssues.map((item) => ({
+      number: item.number,
+      title: item.title,
+      nodeId: item.node_id,
+      body: item.body || "",
+      state: item.state || "open",
+      milestone: item.milestone ? { number: item.milestone.number, title: item.milestone.title } : null
+    }));
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not fetch candidate issues for relationship/duplicate detection:`, err.message);
+    return [];
+  }
+}
+async function findIssueWorkAssociations({ token, repository, issueNumber }) {
+  if (!token || !repository || !issueNumber) return { branchName: null, prNumber: null, prUrl: null };
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    const { data: openPRs } = await octokit.rest.pulls.list({
+      owner,
+      repo,
+      state: "open",
+      per_page: 50
+    });
+    const targetPattern = new RegExp(`(?:#|issues\\/)${issueNumber}\\b`, "i");
+    for (const pr of openPRs) {
+      if (pr.body && targetPattern.test(pr.body) || pr.title && targetPattern.test(pr.title) || pr.head?.ref?.includes(String(issueNumber))) {
+        return {
+          branchName: pr.head?.ref || null,
+          prNumber: pr.number,
+          prUrl: pr.html_url
+        };
+      }
+    }
+    try {
+      const { data: branches } = await octokit.rest.repos.listBranches({
+        owner,
+        repo,
+        per_page: 100
+      });
+      const issueBranch = branches.find(
+        (b) => new RegExp(`(^|[-_/])${issueNumber}([-_/]|$)`).test(b.name)
+      );
+      if (issueBranch) {
+        return { branchName: issueBranch.name, prNumber: null, prUrl: null };
+      }
+    } catch {
+    }
+    return { branchName: null, prNumber: null, prUrl: null };
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not inspect work associations for issue #${issueNumber}:`, err.message);
+    return { branchName: null, prNumber: null, prUrl: null };
+  }
+}
+async function linkSubIssue({ token, parentIssueId, subIssueId }) {
+  if (!token || !parentIssueId || !subIssueId) return;
+  try {
+    const octokit = new Octokit2({ auth: token });
+    const mutation = `
+      mutation addSubIssue($issueId: ID!, $subIssueId: ID!) {
+        addSubIssue(input: { issueId: $issueId, subIssueId: $subIssueId }) {
+          subIssue {
+            id
+            number
+          }
+        }
+      }
+    `;
+    await octokit.graphql(mutation, {
+      issueId: parentIssueId,
+      subIssueId,
+      headers: {
+        "GraphQL-Features": "sub_issues"
+      }
+    });
+    console.log(`[GitHub] Successfully linked sub-issue via GraphQL.`);
+  } catch (err) {
+    console.log(`[GitHub] Note: GraphQL sub-issue linking: ${err.message}`);
+  }
+}
+async function linkBlockedBy({ token, blockedIssueId, blockingIssueId }) {
+  if (!token || !blockedIssueId || !blockingIssueId) return;
+  try {
+    const octokit = new Octokit2({ auth: token });
+    const mutation = `
+      mutation addBlockedBy($issueId: ID!, $blockingIssueId: ID!) {
+        addBlockedBy(input: { issueId: $issueId, blockingIssueId: $blockingIssueId }) {
+          blockingIssue {
+            id
+            number
+          }
+        }
+      }
+    `;
+    await octokit.graphql(mutation, {
+      issueId: blockedIssueId,
+      blockingIssueId
+    });
+    console.log(`[GitHub] Successfully linked blocked-by dependency via GraphQL.`);
+  } catch (err) {
+    console.log(`[GitHub] Note: GraphQL issue dependency linking: ${err.message}`);
+  }
+}
+async function getIssueDetails({ token, repository, issueNumber }) {
+  if (!token || !repository || !issueNumber) return null;
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    const { data } = await octokit.rest.issues.get({
+      owner,
+      repo,
+      issue_number: parseInt(issueNumber, 10)
+    });
+    return data;
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Could not fetch details for issue #${issueNumber}:`, err.message);
+    return null;
+  }
+}
+async function assignUsersToIssue({ token, repository, issueNumber, assignees }) {
+  if (!token || !repository || !issueNumber || !Array.isArray(assignees) || assignees.length === 0) return;
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    console.log(`[GitHub] Assigning issue #${issueNumber} to: ${assignees.join(", ")}`);
+    await octokit.rest.issues.addAssignees({
+      owner,
+      repo,
+      issue_number: parseInt(issueNumber, 10),
+      assignees
+    });
+    console.log(`[GitHub] Successfully assigned issue #${issueNumber}.`);
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Failed to assign users to issue #${issueNumber}:`, err.message);
+  }
+}
+async function setIssueMilestone({ token, repository, issueNumber, milestoneNumber }) {
+  if (!token || !repository || !issueNumber || !milestoneNumber) return;
+  try {
+    const [owner, repo] = repository.split("/");
+    const octokit = new Octokit2({ auth: token });
+    console.log(`[GitHub] Setting milestone #${milestoneNumber} on issue #${issueNumber}...`);
+    await octokit.rest.issues.update({
+      owner,
+      repo,
+      issue_number: parseInt(issueNumber, 10),
+      milestone: milestoneNumber
+    });
+    console.log(`[GitHub] Successfully set milestone on issue #${issueNumber}.`);
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Failed to set milestone on issue #${issueNumber}:`, err.message);
+  }
+}
+async function createAndLinkBranch({
+  token,
+  repository,
+  issueNumber,
+  issueTitle,
+  issueNodeId,
+  branchPrefix = "issue-"
+}) {
+  if (!token || !repository || !issueNumber) return null;
+  const [owner, repo] = repository.split("/");
+  const octokit = new Octokit2({ auth: token });
+  try {
+    const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
+    const defaultBranch = repoData.default_branch || "main";
+    const { data: refData } = await octokit.rest.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${defaultBranch}`
+    });
+    const latestCommitSha = refData.object.sha;
+    const slug = (issueTitle || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
+    const branchName = `${branchPrefix}${issueNumber}${slug ? `-${slug}` : ""}`;
+    console.log(`[GitHub] Preparing development branch "${branchName}" from "${defaultBranch}" (${latestCommitSha.slice(0, 7)})...`);
+    try {
+      const { execFileSync } = await import("child_process");
+      console.log(`[GitHub] Attempting to create and link branch via GitHub CLI ('gh issue develop')...`);
+      execFileSync(
+        "gh",
+        [
+          "issue",
+          "develop",
+          String(issueNumber),
+          "--repo",
+          repository,
+          "--name",
+          branchName,
+          "--base",
+          defaultBranch
+        ],
+        {
+          env: {
+            ...process.env,
+            GH_TOKEN: token,
+            GITHUB_TOKEN: token
+          },
+          stdio: "pipe",
+          encoding: "utf8"
+        }
+      );
+      console.log(`[GitHub] Successfully created and linked branch "${branchName}" to issue #${issueNumber} via GitHub CLI.`);
+      return branchName;
+    } catch (cliErr) {
+      console.log(`[GitHub] Note: GitHub CLI linking returned: ${cliErr.message?.split("\n")[0] || "unavailable"}. Attempting GraphQL mutation.`);
+    }
+    if (issueNodeId) {
+      try {
+        const linkMutation = `
+          mutation createLinkedBranch($input: CreateLinkedBranchInput!) {
+            createLinkedBranch(input: $input) {
+              linkedBranch {
+                id
+                ref {
+                  name
+                }
+              }
+            }
+          }
+        `;
+        const res = await octokit.graphql(linkMutation, {
+          input: {
+            issueId: issueNodeId,
+            oid: latestCommitSha,
+            name: branchName,
+            repositoryId: repoData.node_id
+          }
+        });
+        if (res?.createLinkedBranch?.linkedBranch?.id) {
+          console.log(`[GitHub] Successfully created and linked branch "${branchName}" to issue #${issueNumber} via GraphQL.`);
+          return branchName;
+        }
+      } catch (linkErr) {
+        console.log(`[GitHub] Note: GraphQL createLinkedBranch returned: ${linkErr.message}. Falling back to Git ref creation.`);
+      }
+    }
+    try {
+      console.log(`[GitHub] Creating branch "${branchName}" in Git directly...`);
+      await octokit.rest.git.createRef({
+        owner,
+        repo,
+        ref: `refs/heads/${branchName}`,
+        sha: latestCommitSha
+      });
+      console.log(`[GitHub] Successfully created branch "${branchName}" in Git.`);
+      return branchName;
+    } catch (refErr) {
+      if (refErr.message && refErr.message.includes("Reference already exists")) {
+        console.log(`[GitHub] Branch "${branchName}" already exists in Git.`);
+        return branchName;
+      }
+      throw refErr;
+    }
+  } catch (err) {
+    console.warn(`[GitHub] Warning: Failed to create development branch:`, err.message);
+    return null;
+  }
+}
 async function updateGitHubIssue({
   token,
   repository,
   issueNumber,
   originalTitle,
+  enhancedTitle,
   originalBody,
   enhancedBody,
-  modelUsed
+  fixInstructions,
+  modelUsed,
+  options = {}
 }) {
   if (!token) {
     throw new Error("GITHUB_TOKEN is required to update GitHub issues.");
@@ -49929,48 +51022,193 @@ async function updateGitHubIssue({
   if (isNaN(num)) {
     throw new Error(`Invalid issue number: ${issueNumber}`);
   }
+  const {
+    postComment = true,
+    preserveOriginal = true,
+    addBadge = true,
+    addLabels = [],
+    recommendedLabels = [],
+    skipBodyUpdate = false,
+    autoAssign = false,
+    assignees = [],
+    milestone = null,
+    candidateMilestones = [],
+    createBranch = false,
+    branchPrefix = "issue-",
+    projectUrl = null,
+    projectNumber = null,
+    projectOwner = null,
+    projectToken = null,
+    estimatedPriority = null,
+    estimatedSize = null,
+    priorityField = "Priority",
+    sizeField = "Size",
+    createdBranchName = null,
+    relationshipDetails = null,
+    duplicateOf = null
+  } = options;
   const octokit = new Octokit2({ auth: token });
-  const updatedIssueBody = [
-    ENHANCED_MARKER,
-    "> [!NOTE]",
-    "> **Issue Formatted with Gemini Flash Lite**",
-    "> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.",
-    "",
-    enhancedBody,
-    "",
-    "---",
-    "<details>",
-    "<summary>\u{1F50D} <b>Original Submission</b> (Click to expand)</summary>",
-    "",
-    originalBody ? originalBody : "*(Original body was empty)*",
-    "",
-    "</details>"
-  ].join("\n");
-  console.log(`[GitHub] Updating issue #${num} in ${owner}/${repo}...`);
-  await octokit.rest.issues.update({
-    owner,
-    repo,
-    issue_number: num,
-    body: updatedIssueBody
-  });
-  console.log(`[GitHub] Successfully updated issue #${num} description.`);
-  const commentContent = [
-    "> [!NOTE]",
-    "> ### \u{1F916} Issue Formatted with Gemini Flash Lite",
-    "> This issue description was automatically reworded and structured for clarity and readability without adding any new content or assumptions.",
-    "",
-    `- **Model Used:** \`${modelUsed}\``,
-    "- **Changes:** Reworded and organized into standard GitHub issue format.",
-    "- **Original Content:** Preserved and accessible via the collapsible dropdown in the description above."
-  ].join("\n");
-  console.log(`[GitHub] Posting summary comment to issue #${num}...`);
-  await octokit.rest.issues.createComment({
-    owner,
-    repo,
-    issue_number: num,
-    body: commentContent
-  });
-  console.log(`[GitHub] Successfully posted comment to issue #${num}.`);
+  const isDuplicate = Boolean(duplicateOf);
+  if (skipBodyUpdate) {
+    console.log(`[GitHub] Issue #${num} description was evaluated as thorough. Preserving original issue body and title.`);
+  } else {
+    const bodyParts = [ENHANCED_MARKER];
+    if (isDuplicate) {
+      bodyParts.push(
+        "> [!WARNING]",
+        `> **Duplicate Issue Detected**`,
+        `> This issue has been identified as a duplicate of #${duplicateOf} and closed automatically.`,
+        ""
+      );
+    } else if (addBadge) {
+      bodyParts.push(
+        "> [!NOTE]",
+        "> **Issue Formatted with Gemini Flash Lite**",
+        "> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.",
+        ""
+      );
+    }
+    bodyParts.push(enhancedBody);
+    if (preserveOriginal) {
+      bodyParts.push(
+        "",
+        "---",
+        "<details>",
+        "<summary>\u{1F50D} <b>Original Submission</b> (Click to expand)</summary>",
+        "",
+        originalBody ? originalBody : "*(Original body was empty)*",
+        "",
+        "</details>"
+      );
+    }
+    const updatedIssueBody = bodyParts.join("\n");
+    const updatePayload = {
+      owner,
+      repo,
+      issue_number: num,
+      body: updatedIssueBody
+    };
+    const hasTitleUpdate = Boolean(enhancedTitle && enhancedTitle !== originalTitle);
+    if (hasTitleUpdate) {
+      updatePayload.title = enhancedTitle;
+    }
+    if (isDuplicate) {
+      updatePayload.state = "closed";
+      updatePayload.state_reason = "not_planned";
+    }
+    console.log(`[GitHub] Updating issue #${num} in ${owner}/${repo}...`);
+    await octokit.rest.issues.update(updatePayload);
+    console.log(`[GitHub] Successfully updated issue #${num} description${isDuplicate ? " and closed as duplicate" : ""}.`);
+  }
+  if (skipBodyUpdate && isDuplicate) {
+    console.log(`[GitHub] Closing issue #${num} as duplicate of #${duplicateOf}...`);
+    try {
+      await octokit.rest.issues.update({
+        owner,
+        repo,
+        issue_number: num,
+        state: "closed",
+        state_reason: "not_planned"
+      });
+      console.log(`[GitHub] Successfully closed issue #${num} as duplicate.`);
+    } catch (closeErr) {
+      console.warn(`[GitHub] Warning: Failed to close issue #${num}:`, closeErr.message);
+    }
+  }
+  const allLabels = [...addLabels, ...recommendedLabels];
+  if (isDuplicate && !allLabels.includes("duplicate")) {
+    allLabels.push("duplicate");
+  }
+  const combinedLabels = Array.from(
+    new Set(allLabels.map((l) => l.trim()).filter(Boolean))
+  );
+  if (combinedLabels.length > 0) {
+    try {
+      console.log(`[GitHub] Adding label(s) to issue #${num}: ${combinedLabels.join(", ")}`);
+      await octokit.rest.issues.addLabels({
+        owner,
+        repo,
+        issue_number: num,
+        labels: combinedLabels
+      });
+      console.log(`[GitHub] Successfully added labels to issue #${num}.`);
+    } catch (lblErr) {
+      console.warn(`[GitHub] Warning: Failed to apply labels to issue #${num}:`, lblErr.message);
+    }
+  }
+  if (postComment) {
+    const hasFixInstructions = Boolean(fixInstructions && fixInstructions.trim());
+    const rel = relationshipDetails || {};
+    const hasRelationships = Boolean(
+      rel.relatedIssues && rel.relatedIssues.length > 0 || rel.blockedByIssues && rel.blockedByIssues.length > 0 || rel.blockingIssues && rel.blockingIssues.length > 0 || rel.parentIssue || rel.reusedBranchInfo
+    );
+    if (isDuplicate || hasFixInstructions || hasRelationships || createdBranchName) {
+      const commentLines = [];
+      if (isDuplicate) {
+        commentLines.push(
+          "> [!WARNING]",
+          "> ### \u{1F6AB} Closed as Duplicate",
+          `> This issue has been evaluated as a duplicate of #${duplicateOf} and has been closed.`,
+          `> `,
+          `> Please refer to #${duplicateOf} for ongoing discussion and progress.`
+        );
+      }
+      if (hasFixInstructions && !isDuplicate) {
+        commentLines.push(
+          "> [!TIP]",
+          "> ### \u{1F4A1} Instructions to Fix This Issue",
+          "> Here are brief instructions to help anyone interested in resolving this issue:",
+          "",
+          fixInstructions.trim()
+        );
+      }
+      if (hasRelationships) {
+        if (commentLines.length > 0) commentLines.push("");
+        commentLines.push(
+          "> [!NOTE]",
+          "> ### \u{1F517} Issue Relationships & Work Context"
+        );
+        if (rel.parentIssue) {
+          commentLines.push(`> - **Sub-issue of**: #${rel.parentIssue}`);
+        }
+        if (rel.blockedByIssues && rel.blockedByIssues.length > 0) {
+          commentLines.push(`> - **Blocked by**: ${rel.blockedByIssues.map((n) => `#${n}`).join(", ")}`);
+        }
+        if (rel.blockingIssues && rel.blockingIssues.length > 0) {
+          commentLines.push(`> - **Blocks**: ${rel.blockingIssues.map((n) => `#${n}`).join(", ")}`);
+        }
+        if (rel.relatedIssues && rel.relatedIssues.length > 0) {
+          commentLines.push(`> - **Related issues**: ${rel.relatedIssues.map((n) => `#${n}`).join(", ")}`);
+        }
+        if (rel.reusedBranchInfo) {
+          const prRef = rel.reusedBranchInfo.prNumber ? ` (PR #${rel.reusedBranchInfo.prNumber})` : "";
+          commentLines.push(
+            `> - **Development Branch**: Shared with related issue #${rel.reusedBranchInfo.issueNumber} on \`${rel.reusedBranchInfo.branchName}\`${prRef}`
+          );
+        }
+      }
+      if (createdBranchName && (!rel.reusedBranchInfo || rel.reusedBranchInfo.branchName !== createdBranchName)) {
+        if (commentLines.length > 0) commentLines.push("");
+        commentLines.push(
+          "> [!NOTE]",
+          `> Development branch \`${createdBranchName}\` has been created for this issue.`
+        );
+      }
+      const commentContent = commentLines.join("\n");
+      console.log(`[GitHub] Posting ${isDuplicate ? "duplicate notification" : "contributor fix instructions"} comment to issue #${num}...`);
+      await octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: num,
+        body: commentContent
+      });
+      console.log(`[GitHub] Successfully posted fix instructions comment to issue #${num}.`);
+    } else {
+      console.log(`[GitHub] Contributor fix instructions not applicable for issue #${num}. Skipping comment.`);
+    }
+  } else {
+    console.log(`[GitHub] Skipping comment on issue #${num} (post-comment is disabled).`);
+  }
 }
 
 // src/index.js
@@ -49983,6 +51221,34 @@ function parseArgs() {
       parsed.title = args[++i2];
     } else if (arg === "--body" && i2 + 1 < args.length) {
       parsed.body = args[++i2];
+    } else if (arg === "--model" && i2 + 1 < args.length) {
+      parsed.model = args[++i2];
+    } else if (arg === "--temperature" && i2 + 1 < args.length) {
+      parsed.temperature = parseFloat(args[++i2]);
+    } else if (arg === "--custom-instruction" && i2 + 1 < args.length) {
+      parsed.customInstruction = args[++i2];
+    } else if (arg === "--enhance-title") {
+      parsed.enhanceTitle = true;
+    } else if (arg === "--no-comment") {
+      parsed.postComment = false;
+    } else if (arg === "--no-original") {
+      parsed.preserveOriginal = false;
+    } else if (arg === "--no-badge") {
+      parsed.addBadge = false;
+    } else if (arg === "--add-labels" && i2 + 1 < args.length) {
+      parsed.addLabels = args[++i2];
+    } else if (arg === "--auto-assign") {
+      parsed.autoAssign = true;
+    } else if (arg === "--assignees" && i2 + 1 < args.length) {
+      parsed.assignees = args[++i2];
+    } else if (arg === "--milestone" && i2 + 1 < args.length) {
+      parsed.milestone = args[++i2];
+    } else if (arg === "--create-branch") {
+      parsed.createBranch = true;
+    } else if (arg === "--project-url" && i2 + 1 < args.length) {
+      parsed.projectUrl = args[++i2];
+    } else if (arg === "--no-close-duplicates") {
+      parsed.closeDuplicates = false;
     } else if (arg === "--test") {
       parsed.test = true;
     } else if (arg === "--help" || arg === "-h") {
@@ -50003,6 +51269,68 @@ function promptLine(question) {
     });
   });
 }
+function resolveAssignees({ repository, config, labels, title, body }) {
+  const [owner] = repository ? repository.split("/") : [""];
+  const filteredAssignees = (config.assignees || []).filter(
+    (a) => a && a.toLowerCase() !== "auto" && a.toLowerCase() !== "none"
+  );
+  const assigneesSet = new Set(filteredAssignees);
+  const wantsAutoAssign = Boolean(config.autoAssign) || (config.assignees || []).some((a) => a && a.toLowerCase() === "auto");
+  if (Array.isArray(config.assignmentRules)) {
+    const textToMatch = `${title} ${body}`.toLowerCase();
+    const currentLabels = (labels || []).map((l) => l.toLowerCase());
+    for (const rule of config.assignmentRules) {
+      if (!rule || !Array.isArray(rule.assignees)) continue;
+      let matched = false;
+      if (rule.label && currentLabels.includes(rule.label.toLowerCase())) {
+        matched = true;
+      }
+      if (rule.keyword && textToMatch.includes(rule.keyword.toLowerCase())) {
+        matched = true;
+      }
+      if (matched) {
+        for (const a of rule.assignees) {
+          assigneesSet.add(a);
+        }
+      }
+    }
+  }
+  if (wantsAutoAssign && assigneesSet.size === 0 && owner) {
+    console.log(`[GitHub Action] Auto-assigning issue to repository owner: "${owner}".`);
+    assigneesSet.add(owner);
+  }
+  return Array.from(assigneesSet);
+}
+function resolveMilestone({ config, candidateMilestones, recommendedMilestone }) {
+  if (!config.milestone) return null;
+  if (!candidateMilestones || candidateMilestones.length === 0) {
+    console.log("[GitHub Action] Note: Repository has no open milestones created. Skipping milestone assignment.");
+    return null;
+  }
+  const milestoneSetting = String(config.milestone).trim();
+  const findMilestoneMatch = (targetTitle) => {
+    if (!targetTitle) return null;
+    const cleanTarget = targetTitle.trim().toLowerCase();
+    return candidateMilestones.find(
+      (m2) => m2.title && m2.title.trim().toLowerCase() === cleanTarget
+    );
+  };
+  if (milestoneSetting.toLowerCase() === "auto") {
+    if (!recommendedMilestone) return null;
+    const match3 = findMilestoneMatch(recommendedMilestone);
+    if (!match3) {
+      console.log(`[GitHub Action] AI recommendation "${recommendedMilestone}" did not match any open milestone.`);
+      return null;
+    }
+    return match3.number;
+  }
+  const asNumber = parseInt(milestoneSetting, 10);
+  if (!isNaN(asNumber) && String(asNumber) === milestoneSetting) {
+    return asNumber;
+  }
+  const match2 = findMilestoneMatch(milestoneSetting);
+  return match2 ? match2.number : null;
+}
 async function runLocal(args) {
   if (args.help) {
     console.log(`
@@ -50010,13 +51338,28 @@ Usage:
   node src/index.js [options]
 
 Options:
-  --title <title>    Specify issue title
-  --body <body>      Specify issue body text
-  --test             Run with a simulated issue
-  --help, -h         Show help information
+  --title <title>              Specify issue title
+  --body <body>                Specify issue body text
+  --model <model>              Gemini model to use
+  --temperature <val>          Sampling temperature (0.0 - 1.0)
+  --custom-instruction <txt>   Custom formatting guidelines or rules
+  --enhance-title              Enable title rewording & clarification
+  --no-comment                 Disable posting contributor fix instructions comment
+  --no-original                Disable appending original submission block
+  --no-badge                   Disable [!NOTE] header callout badge
+  --add-labels <labels>        Comma-separated labels to apply
+  --auto-assign                Enable auto-assignment
+  --assignees <users>          Comma-separated usernames to assign
+  --milestone <name/num/auto>  Milestone to assign
+  --create-branch              Enable development branch creation
+  --project-url <url>          GitHub Project v2 URL
+  --no-close-duplicates        Disable auto-closing duplicate issues
+  --test                       Run with a simulated issue
+  --help, -h                   Show help information
     `);
     process.exit(0);
   }
+  const config = loadConfig(args);
   let title = args.title;
   let body = args.body;
   if (args.test) {
@@ -50036,14 +51379,78 @@ Options:
     }
     body = lines.join("\n").trim();
   }
-  console.log("\nEnhancing issue with Gemini Flash Lite without adding new content...\n");
+  if (!title && !body) {
+    console.error("Error: At least an issue title or body is required.");
+    process.exit(1);
+  }
+  console.log("\nEnhancing issue with Gemini Flash Lite...\n");
   try {
-    const { enhancedBody, modelUsed } = await enhanceIssue(title, body);
-    console.log("==========================================");
-    console.log(`  ENHANCED ISSUE (Model: ${modelUsed})`);
-    console.log("==========================================\n");
+    const {
+      isThorough,
+      enhancedTitle,
+      enhancedBody,
+      fixInstructions,
+      recommendedLabels,
+      estimatedPriority,
+      estimatedSize,
+      recommendedMilestone,
+      duplicateOf,
+      modelUsed
+    } = await enhanceIssue(title, body, {
+      model: config.geminiModel,
+      temperature: config.temperature,
+      customInstruction: config.customInstruction,
+      enhanceTitle: config.enhanceTitle,
+      availableLabels: config.addLabels.length > 0 ? config.addLabels : ["bug", "documentation", "enhancement", "ui/ux", "frontend", "backend"]
+    });
+    console.log("=========================================");
+    console.log("             ENHANCED ISSUE              ");
+    console.log("=========================================\n");
+    console.log(`Evaluated Thorough: ${isThorough ? "YES (Skip body rewrite)" : "NO (Rewritten for clarity)"}`);
+    if (duplicateOf) {
+      console.log(`\u{1F6A8} DUPLICATE DETECTED: Duplicate of #${duplicateOf}`);
+    }
+    if (config.enhanceTitle && enhancedTitle) {
+      console.log(`Enhanced Title: ${enhancedTitle}
+`);
+    }
+    if (config.addBadge) {
+      console.log("> [!NOTE]");
+      console.log("> **Issue Formatted with Gemini Flash Lite**");
+      console.log("> This issue description was automatically reworded and structured for technical clarity without adding any new content or assumptions. Original raw submission is preserved below.\n");
+    }
     console.log(enhancedBody);
-    console.log("\n==========================================");
+    if (config.preserveOriginal) {
+      console.log("\n---");
+      console.log("<details>");
+      console.log("<summary>\u{1F50D} <b>Original Submission</b> (Click to expand)</summary>\n");
+      console.log(body ? body : "*(Original body was empty)*");
+      console.log("\n</details>");
+    }
+    console.log("\n=========================================");
+    console.log("           AUTOMATED TRIAGE              ");
+    console.log("=========================================");
+    console.log(`Duplicate Of:       ${duplicateOf ? `#${duplicateOf}` : "None"}`);
+    console.log(`Recommended Labels: ${recommendedLabels.length > 0 ? recommendedLabels.join(", ") : "None"}`);
+    console.log(`Estimated Priority: ${estimatedPriority || "Unspecified"}`);
+    console.log(`Estimated Size:     ${estimatedSize || "Unspecified"}`);
+    console.log(`Recommended Milestone: ${recommendedMilestone || "None"}`);
+    if (config.postComment) {
+      console.log("\n=========================================");
+      console.log("     CONTRIBUTOR FIX INSTRUCTIONS        ");
+      console.log("=========================================\n");
+      if (duplicateOf) {
+        console.log(`> [!WARNING]
+> Marked as duplicate of #${duplicateOf} and closed.`);
+      } else if (fixInstructions) {
+        console.log("> [!TIP]");
+        console.log("> ### \u{1F4A1} Instructions to Fix This Issue");
+        console.log("> Here are brief instructions to help anyone interested in resolving this issue:\n");
+        console.log(fixInstructions);
+      } else {
+        console.log("(Instructions not applicable for this issue)");
+      }
+    }
   } catch (error) {
     console.error("Enhancement failed:", error.message);
     process.exit(1);
@@ -50051,17 +51458,41 @@ Options:
 }
 async function runGitHubAction() {
   console.log("[GitHub Action] Starting GitHub Issue Enhancer workflow...");
+  const config = loadConfig();
+  const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
   let title = process.env.ISSUE_TITLE || "";
   let body = process.env.ISSUE_BODY || "";
   let issueNumber = process.env.ISSUE_NUMBER;
   let repository = process.env.REPOSITORY;
-  if (process.env.GITHUB_EVENT_PATH && fs3.existsSync(process.env.GITHUB_EVENT_PATH)) {
+  let author = process.env.ISSUE_AUTHOR || "";
+  let labels = [];
+  let isCommentTrigger = false;
+  let commentId = process.env.COMMENT_ID || null;
+  let forceEnhance = false;
+  if (process.env.ISSUE_LABELS) {
     try {
-      const eventData = JSON.parse(fs3.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
+      const parsedLabels = JSON.parse(process.env.ISSUE_LABELS);
+      if (Array.isArray(parsedLabels)) {
+        labels = parsedLabels.map((l) => typeof l === "string" ? l : l.name || "");
+      }
+    } catch {
+      labels = parseList(process.env.ISSUE_LABELS);
+    }
+  }
+  let eventData = null;
+  if (process.env.GITHUB_EVENT_PATH && fs4.existsSync(process.env.GITHUB_EVENT_PATH)) {
+    try {
+      eventData = JSON.parse(fs4.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
       if (eventData.issue) {
         title = eventData.issue.title || title;
         body = eventData.issue.body || body;
         issueNumber = eventData.issue.number || issueNumber;
+        if (eventData.issue.user && eventData.issue.user.login) {
+          author = eventData.issue.user.login;
+        }
+        if (Array.isArray(eventData.issue.labels)) {
+          labels = eventData.issue.labels.map((l) => typeof l === "string" ? l : l.name || "");
+        }
       }
       if (eventData.repository && eventData.repository.full_name) {
         repository = eventData.repository.full_name || repository;
@@ -50076,22 +51507,282 @@ async function runGitHubAction() {
   if (!repository) {
     throw new Error("REPOSITORY is missing from action context.");
   }
-  if (isAlreadyEnhanced(body)) {
-    console.log(`[GitHub Action] Issue #${issueNumber} is already enhanced. Skipping to prevent loop.`);
-    return;
+  if (eventData && eventData.comment) {
+    isCommentTrigger = true;
+    commentId = eventData.comment.id;
+    if (eventData.issue && eventData.issue.pull_request) {
+      console.log("[GitHub Action] Comment is on a pull request, not an issue. Skipping.");
+      return;
+    }
+    const commentBody = eventData.comment.body || process.env.COMMENT_BODY || "";
+    const isEnhanceCommand = /^\s*\/enhance\b/im.test(commentBody);
+    if (!isEnhanceCommand) {
+      console.log("[GitHub Action] Comment does not contain /enhance command. Skipping.");
+      return;
+    }
+    const commentAuthor = eventData.comment.user?.login || process.env.COMMENT_AUTHOR || "";
+    const issueAuthor = eventData.issue?.user?.login || author || "";
+    const authorAssociation = (eventData.comment.author_association || process.env.COMMENT_AUTHOR_ASSOCIATION || "").toUpperCase();
+    const allowedRoles = ["OWNER", "MEMBER", "COLLABORATOR"];
+    const isAuthorized = commentAuthor && issueAuthor && commentAuthor.toLowerCase() === issueAuthor.toLowerCase() || allowedRoles.includes(authorAssociation);
+    if (!isAuthorized) {
+      console.log(
+        `[GitHub Action] User "${commentAuthor}" (association: ${authorAssociation}) is not authorized to execute /enhance. Allowed: issue author, repository owner, members, or collaborators. Skipping.`
+      );
+      return;
+    }
+    if (commentId && githubToken) {
+      await addCommentReaction({
+        token: githubToken,
+        repository,
+        commentId,
+        content: "eyes"
+      });
+    }
+    forceEnhance = true;
+    if (isAlreadyEnhanced(body)) {
+      console.log(`[GitHub Action] Issue #${issueNumber} was previously enhanced. Extracting base content for re-enhancement.`);
+      body = extractRawIssueContent(body);
+    }
+  } else {
+    if (isAlreadyEnhanced(body)) {
+      console.log(`[GitHub Action] Issue #${issueNumber} is already enhanced. Skipping to prevent loop.`);
+      return;
+    }
   }
-  console.log(`[GitHub Action] Processing issue #${issueNumber}: "${title}"`);
-  const { enhancedBody, modelUsed } = await enhanceIssue(title, body);
+  if (config.ignoreAuthors && config.ignoreAuthors.length > 0 && author) {
+    const isIgnoredAuthor = config.ignoreAuthors.some(
+      (ignored) => ignored.trim().toLowerCase() === author.trim().toLowerCase()
+    );
+    if (isIgnoredAuthor) {
+      console.log(`[GitHub Action] Issue #${issueNumber} opened by ignored author: "${author}". Skipping enhancement.`);
+      return;
+    }
+  }
+  if (config.ignoreLabels && config.ignoreLabels.length > 0 && labels.length > 0) {
+    const lowerLabels = labels.map((l) => l.toLowerCase());
+    const matchedLabel = config.ignoreLabels.find((il) => lowerLabels.includes(il.toLowerCase()));
+    if (matchedLabel) {
+      console.log(`[GitHub Action] Issue #${issueNumber} has ignored label: "${matchedLabel}". Skipping enhancement.`);
+      return;
+    }
+  }
+  console.log(`[GitHub Action] Fetching repository labels and context for ${repository}...`);
+  const availableLabels = await fetchRepositoryLabels({
+    token: githubToken,
+    repository
+  });
+  let candidateMilestones = [];
+  if (config.milestone) {
+    candidateMilestones = await fetchRepositoryMilestones({
+      token: githubToken,
+      repository
+    });
+  }
+  console.log(`[GitHub Action] Fetching open issues for relationship detection...`);
+  const candidateIssues = await fetchOpenIssues({
+    token: githubToken,
+    repository,
+    excludeIssueNumber: issueNumber,
+    limit: 30
+  });
+  const issueDetails = await getIssueDetails({
+    token: githubToken,
+    repository,
+    issueNumber
+  });
+  const issueNodeId = issueDetails?.node_id || null;
+  console.log(`[GitHub Action] Processing issue #${issueNumber}: "${title}" (forceEnhance: ${forceEnhance})`);
+  const {
+    isThorough,
+    enhancedTitle,
+    enhancedBody,
+    fixInstructions,
+    recommendedLabels,
+    estimatedPriority,
+    estimatedSize,
+    recommendedMilestone,
+    duplicateOf = null,
+    relatedIssues = [],
+    blockedByIssues = [],
+    blockingIssues = [],
+    parentIssue = null,
+    modelUsed
+  } = await enhanceIssue(title, body, {
+    model: config.geminiModel,
+    temperature: config.temperature,
+    customInstruction: config.customInstruction,
+    enhanceTitle: config.enhanceTitle,
+    availableLabels,
+    candidateMilestones: candidateMilestones.map((m2) => m2.title),
+    candidateIssues
+  });
+  const isDuplicate = Boolean(duplicateOf && config.closeDuplicates);
+  if (isDuplicate) {
+    console.log(`[GitHub Action] Issue #${issueNumber} evaluated as DUPLICATE of #${duplicateOf}.`);
+  }
+  const skipBodyUpdate = Boolean(isThorough && !forceEnhance);
+  if (skipBodyUpdate) {
+    console.log(
+      `[GitHub Action] Issue #${issueNumber} was evaluated as thorough on its own. Preserving original body/title, updating triage attributes.`
+    );
+  }
+  if (!isDuplicate && config.linkSubIssues && parentIssue && issueNodeId) {
+    const parentCandidate = candidateIssues.find((iss) => iss.number === parentIssue);
+    if (parentCandidate && parentCandidate.nodeId) {
+      console.log(`[GitHub Action] Linking issue #${issueNumber} as sub-issue of #${parentIssue}...`);
+      await linkSubIssue({
+        token: githubToken,
+        parentIssueId: parentCandidate.nodeId,
+        subIssueId: issueNodeId
+      });
+    }
+  }
+  if (!isDuplicate && config.linkDependencies && issueNodeId) {
+    for (const blockedByNum of blockedByIssues) {
+      const blockingCandidate = candidateIssues.find((iss) => iss.number === blockedByNum);
+      if (blockingCandidate && blockingCandidate.nodeId) {
+        console.log(`[GitHub Action] Linking issue #${issueNumber} as blocked by #${blockedByNum}...`);
+        await linkBlockedBy({
+          token: githubToken,
+          blockedIssueId: issueNodeId,
+          blockingIssueId: blockingCandidate.nodeId
+        });
+      }
+    }
+    for (const blockingNum of blockingIssues) {
+      const blockedCandidate = candidateIssues.find((iss) => iss.number === blockingNum);
+      if (blockedCandidate && blockedCandidate.nodeId) {
+        console.log(`[GitHub Action] Linking issue #${blockingNum} as blocked by #${issueNumber}...`);
+        await linkBlockedBy({
+          token: githubToken,
+          blockedIssueId: blockedCandidate.nodeId,
+          blockingIssueId: issueNodeId
+        });
+      }
+    }
+  }
+  const resolvedAssignees = !isDuplicate ? resolveAssignees({
+    repository,
+    config,
+    labels: [...labels, ...recommendedLabels],
+    title,
+    body
+  }) : [];
+  if (resolvedAssignees.length > 0) {
+    await assignUsersToIssue({
+      token: githubToken,
+      repository,
+      issueNumber,
+      assignees: resolvedAssignees
+    });
+  }
+  const resolvedMilestoneNumber = !isDuplicate ? resolveMilestone({
+    config,
+    candidateMilestones,
+    recommendedMilestone
+  }) : null;
+  if (resolvedMilestoneNumber) {
+    await setIssueMilestone({
+      token: githubToken,
+      repository,
+      issueNumber,
+      milestoneNumber: resolvedMilestoneNumber
+    });
+  }
+  let createdBranchName = null;
+  let reusedBranchInfo = null;
+  if (!isDuplicate && config.createBranch) {
+    const candidateWorkIssues = Array.from(
+      new Set([parentIssue, ...blockedByIssues, ...blockingIssues, ...relatedIssues].filter(Boolean))
+    );
+    for (const relatedNum of candidateWorkIssues) {
+      const existingWork = await findIssueWorkAssociations({
+        token: githubToken,
+        repository,
+        issueNumber: relatedNum
+      });
+      if (existingWork && existingWork.branchName) {
+        reusedBranchInfo = {
+          issueNumber: relatedNum,
+          branchName: existingWork.branchName,
+          prNumber: existingWork.prNumber,
+          prUrl: existingWork.prUrl
+        };
+        console.log(
+          `[GitHub Action] Reusing existing work branch "${existingWork.branchName}" from related issue #${relatedNum}${existingWork.prNumber ? ` (PR #${existingWork.prNumber})` : ""}.`
+        );
+        break;
+      }
+    }
+    if (reusedBranchInfo) {
+      createdBranchName = reusedBranchInfo.branchName;
+    } else {
+      createdBranchName = await createAndLinkBranch({
+        token: githubToken,
+        repository,
+        issueNumber,
+        issueTitle: enhancedTitle || title,
+        issueNodeId,
+        branchPrefix: config.branchPrefix
+      });
+    }
+  }
+  const relationshipDetails = {
+    relatedIssues: config.linkRelated ? relatedIssues : [],
+    blockedByIssues: config.linkDependencies ? blockedByIssues : [],
+    blockingIssues: config.linkDependencies ? blockingIssues : [],
+    parentIssue: config.linkSubIssues ? parentIssue : null,
+    reusedBranchInfo
+  };
   await updateGitHubIssue({
-    token: process.env.GITHUB_TOKEN,
+    token: githubToken,
     repository,
     issueNumber,
     originalTitle: title,
+    enhancedTitle,
     originalBody: body,
     enhancedBody,
-    modelUsed
+    fixInstructions,
+    modelUsed,
+    options: {
+      postComment: config.postComment,
+      preserveOriginal: config.preserveOriginal,
+      addBadge: config.addBadge,
+      addLabels: config.addLabels,
+      recommendedLabels,
+      skipBodyUpdate,
+      createdBranchName,
+      relationshipDetails,
+      duplicateOf: isDuplicate ? duplicateOf : null
+    }
   });
-  console.log(`[GitHub Action] Completed enhancement for issue #${issueNumber}.`);
+  if (!isDuplicate && (config.projectUrl || config.projectNumber) && issueNodeId) {
+    await assignIssueToProject({
+      token: config.projectToken || githubToken,
+      issueNodeId,
+      repository,
+      issueNumber,
+      projectUrl: config.projectUrl,
+      projectNumber: config.projectNumber,
+      projectOwner: config.projectOwner,
+      status: config.initialStatus,
+      statusFieldName: config.statusField,
+      priority: estimatedPriority,
+      size: estimatedSize,
+      priorityFieldName: config.priorityField,
+      sizeFieldName: config.sizeField
+    });
+  }
+  if (isCommentTrigger && commentId && githubToken) {
+    await addCommentReaction({
+      token: githubToken,
+      repository,
+      commentId,
+      content: "rocket"
+    });
+  }
+  console.log(`[GitHub Action] Completed processing for issue #${issueNumber}.`);
 }
 async function main() {
   const isCi = process.env.GITHUB_ACTIONS === "true" || !!process.env.GITHUB_TOKEN;
