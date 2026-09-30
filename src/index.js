@@ -283,12 +283,7 @@ async function runGitHubAction() {
   console.log("[GitHub Action] Starting GitHub Issue Enhancer workflow...");
 
   const config = loadConfig();
-  const githubToken =
-    process.env.GH_PAT ||
-    process.env.PAT_TOKEN ||
-    process.env.PROJECT_TOKEN ||
-    process.env.GITHUB_TOKEN ||
-    process.env.GH_TOKEN;
+  const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 
   let title = process.env.ISSUE_TITLE || "";
   let body = process.env.ISSUE_BODY || "";
