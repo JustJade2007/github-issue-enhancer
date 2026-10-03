@@ -51554,23 +51554,64 @@ async function runGitHubAction() {
       return;
     }
   }
-  if (config.ignoreAuthors && config.ignoreAuthors.length > 0 && author) {
-    const isIgnoredAuthor = config.ignoreAuthors.some(
-      (ignored) => ignored.trim().toLowerCase() === author.trim().toLowerCase()
-    );
-    if (isIgnoredAuthor) {
-      console.log(`[GitHub Action] Issue #${issueNumber} opened by ignored author: "${author}". Skipping enhancement.`);
-      return;
+  if (!forceEnhance) {
+    if (config.ignoreAuthors && config.ignoreAuthors.length > 0 && author) {
+      const isIgnoredAuthor = config.ignoreAuthors.some(
+        (ignored) => ignored.trim().toLowerCase() === author.trim().toLowerCase()
+      );
+      if (isIgnoredAuthor) {
+        console.log(`[GitHub Action] Issue #${issueNumber} opened by ignored author: "${author}". Skipping enhancement.`);
+        return;
+      }
+    }
+    if (config.ignoreLabels && config.ignoreLabels.length > 0 && labels.length > 0) {
+      const lowerLabels = labels.map((l) => l.toLowerCase());
+      const matchedLabel = config.ignoreLabels.find((il) => lowerLabels.includes(il.toLowerCase()));
+      if (matchedLabel) {
+        console.log(`[GitHub Action] Issue #${issueNumber} has ignored label: "${matchedLabel}". Skipping enhancement.`);
+        return;
+      }
     }
   }
-  if (config.ignoreLabels && config.ignoreLabels.length > 0 && labels.length > 0) {
-    const lowerLabels = labels.map((l) => l.toLowerCase());
-    const matchedLabel = config.ignoreLabels.find((il) => lowerLabels.includes(il.toLowerCase()));
-    if (matchedLabel) {
-      console.log(`[GitHub Action] Issue #${issueNumber} has ignored label: "${matchedLabel}". Skipping enhancement.`);
-      return;
+  try {
+    await enhanceAndUpdateIssue({
+      config,
+      githubToken,
+      title,
+      body,
+      issueNumber,
+      repository,
+      author,
+      labels,
+      isCommentTrigger,
+      commentId,
+      forceEnhance
+    });
+  } catch (error) {
+    if (isCommentTrigger && commentId && githubToken) {
+      await addCommentReaction({
+        token: githubToken,
+        repository,
+        commentId,
+        content: "confused"
+      });
     }
+    throw error;
   }
+}
+async function enhanceAndUpdateIssue({
+  config,
+  githubToken,
+  title,
+  body,
+  issueNumber,
+  repository,
+  author,
+  labels,
+  isCommentTrigger,
+  commentId,
+  forceEnhance
+}) {
   console.log(`[GitHub Action] Fetching repository labels and context for ${repository}...`);
   const availableLabels = await fetchRepositoryLabels({
     token: githubToken,

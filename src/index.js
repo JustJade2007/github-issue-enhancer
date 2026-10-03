@@ -415,25 +415,73 @@ async function runGitHubAction() {
     }
   }
 
-  if (config.ignoreAuthors && config.ignoreAuthors.length > 0 && author) {
-    const isIgnoredAuthor = config.ignoreAuthors.some(
-      (ignored) => ignored.trim().toLowerCase() === author.trim().toLowerCase()
-    );
-    if (isIgnoredAuthor) {
-      console.log(`[GitHub Action] Issue #${issueNumber} opened by ignored author: "${author}". Skipping enhancement.`);
-      return;
+  // Ignore-author / ignore-label filters are intended to prevent *automatic* enhancement
+  // on issue creation. An explicit "/enhance" command is a deliberate request from an
+  // authorized user and should always be honored, so these filters are skipped in that case.
+  if (!forceEnhance) {
+    if (config.ignoreAuthors && config.ignoreAuthors.length > 0 && author) {
+      const isIgnoredAuthor = config.ignoreAuthors.some(
+        (ignored) => ignored.trim().toLowerCase() === author.trim().toLowerCase()
+      );
+      if (isIgnoredAuthor) {
+        console.log(`[GitHub Action] Issue #${issueNumber} opened by ignored author: "${author}". Skipping enhancement.`);
+        return;
+      }
+    }
+
+    if (config.ignoreLabels && config.ignoreLabels.length > 0 && labels.length > 0) {
+      const lowerLabels = labels.map((l) => l.toLowerCase());
+      const matchedLabel = config.ignoreLabels.find((il) => lowerLabels.includes(il.toLowerCase()));
+      if (matchedLabel) {
+        console.log(`[GitHub Action] Issue #${issueNumber} has ignored label: "${matchedLabel}". Skipping enhancement.`);
+        return;
+      }
     }
   }
 
-  if (config.ignoreLabels && config.ignoreLabels.length > 0 && labels.length > 0) {
-    const lowerLabels = labels.map((l) => l.toLowerCase());
-    const matchedLabel = config.ignoreLabels.find((il) => lowerLabels.includes(il.toLowerCase()));
-    if (matchedLabel) {
-      console.log(`[GitHub Action] Issue #${issueNumber} has ignored label: "${matchedLabel}". Skipping enhancement.`);
-      return;
+  try {
+    await enhanceAndUpdateIssue({
+      config,
+      githubToken,
+      title,
+      body,
+      issueNumber,
+      repository,
+      author,
+      labels,
+      isCommentTrigger,
+      commentId,
+      forceEnhance
+    });
+  } catch (error) {
+    // If an authorized "/enhance" command fails partway through, the commenter is left
+    // with a permanent "eyes" reaction and no indication anything went wrong. Surface the
+    // failure with a "confused" reaction so there is reliable, visible feedback.
+    if (isCommentTrigger && commentId && githubToken) {
+      await addCommentReaction({
+        token: githubToken,
+        repository,
+        commentId,
+        content: "confused"
+      });
     }
+    throw error;
   }
+}
 
+async function enhanceAndUpdateIssue({
+  config,
+  githubToken,
+  title,
+  body,
+  issueNumber,
+  repository,
+  author,
+  labels,
+  isCommentTrigger,
+  commentId,
+  forceEnhance
+}) {
   // Fetch repository context (labels, milestones, open issues, issue node_id)
   console.log(`[GitHub Action] Fetching repository labels and context for ${repository}...`);
   const availableLabels = await fetchRepositoryLabels({
