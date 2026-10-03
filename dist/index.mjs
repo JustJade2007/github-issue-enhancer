@@ -50662,6 +50662,8 @@ async function assignIssueToProject({
 
 // src/github.js
 var ENHANCED_MARKER = "<!-- gemini-enhanced -->";
+var REPORT_ISSUE_URL = "https://github.com/JustJade2007/github-issue-enhancer/issues";
+var REPORT_ISSUE_FOOTER = `\u{1F41E} [**Report an issue with the Issue Enhancer**](${REPORT_ISSUE_URL})`;
 function isAlreadyEnhanced(body) {
   if (!body) return false;
   return body.includes(ENHANCED_MARKER);
@@ -50674,7 +50676,7 @@ function extractRawIssueContent(body) {
   if (detailsMatch && detailsMatch[1] && detailsMatch[1].trim() && detailsMatch[1].trim() !== "*(Original body was empty)*") {
     return detailsMatch[1].trim();
   }
-  let cleaned = body.replace(/<!--\s*gemini-enhanced\s*-->/gi, "").replace(/>\s*\[!NOTE\][\s\S]*?Original raw submission is preserved below\.\s*/gi, "").trim();
+  let cleaned = body.replace(/<!--\s*gemini-enhanced\s*-->/gi, "").replace(/---\s*🐞 \[\*\*Report an issue with the Issue Enhancer\*\*\]\([^)]*\)/g, "").replace(/>\s*\[!NOTE\][\s\S]*?Original raw submission is preserved below\.\s*/gi, "").trim();
   return cleaned || body;
 }
 async function addCommentReaction({ token, repository, commentId, content }) {
@@ -51081,6 +51083,7 @@ async function updateGitHubIssue({
         "</details>"
       );
     }
+    bodyParts.push("", "---", REPORT_ISSUE_FOOTER);
     const updatedIssueBody = bodyParts.join("\n");
     const updatePayload = {
       owner,
@@ -51194,6 +51197,7 @@ async function updateGitHubIssue({
           `> Development branch \`${createdBranchName}\` has been created for this issue.`
         );
       }
+      commentLines.push("", "---", REPORT_ISSUE_FOOTER);
       const commentContent = commentLines.join("\n");
       console.log(`[GitHub] Posting ${isDuplicate ? "duplicate notification" : "contributor fix instructions"} comment to issue #${num}...`);
       await octokit.rest.issues.createComment({
