@@ -2,6 +2,8 @@ import { Octokit } from "@octokit/rest";
 import { assignIssueToProject } from "./projects.js";
 
 const ENHANCED_MARKER = "<!-- gemini-enhanced -->";
+const REPORT_ISSUE_URL = "https://github.com/JustJade2007/github-issue-enhancer/issues";
+const REPORT_ISSUE_FOOTER = `🐞 [**Report an issue with the Issue Enhancer**](${REPORT_ISSUE_URL})`;
 
 /**
  * Checks if the issue has already been processed by the enhancer.
@@ -38,6 +40,7 @@ export function extractRawIssueContent(body) {
   // Otherwise, strip out known bot markers, badges, and details blocks
   let cleaned = body
     .replace(/<!--\s*gemini-enhanced\s*-->/gi, "")
+    .replace(/---\s*🐞 \[\*\*Report an issue with the Issue Enhancer\*\*\]\([^)]*\)/g, "")
     .replace(/>\s*\[!NOTE\][\s\S]*?Original raw submission is preserved below\.\s*/gi, "")
     .trim();
 
@@ -610,6 +613,8 @@ export async function updateGitHubIssue({
       );
     }
 
+    bodyParts.push("", "---", REPORT_ISSUE_FOOTER);
+
     const updatedIssueBody = bodyParts.join("\n");
 
     const updatePayload = {
@@ -744,6 +749,7 @@ export async function updateGitHubIssue({
         );
       }
 
+      commentLines.push("", "---", REPORT_ISSUE_FOOTER);
       const commentContent = commentLines.join("\n");
 
       console.log(`[GitHub] Posting ${isDuplicate ? "duplicate notification" : "contributor fix instructions"} comment to issue #${num}...`);
