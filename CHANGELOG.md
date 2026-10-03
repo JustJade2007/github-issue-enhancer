@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.8.0] - 2026-10-03
+
+### Fixed
+- **`/enhance` Command Reliability:** The `ignore-authors` and `ignore-labels` filters (intended only to prevent *automatic* enhancement on issue creation) were incorrectly also silently blocking explicit `/enhance` comment commands, making the command appear to do nothing on affected issues. An authorized `/enhance` request now always bypasses these filters.
+- **Failure Feedback:** If enhancement fails after an authorized `/enhance` command has been acknowledged (e.g. missing/invalid `GEMINI_API_KEY`, GitHub API error), the triggering comment is now reacted to with `confused` 😕 so there is reliable, visible feedback instead of the comment being stuck on `eyes` 👀 with no further indication of failure.
+
 ## [2.7.0] - 2026-09-30
 
 ### Changed
