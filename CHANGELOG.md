@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.1] - 2026-10-03
+
+### Fixed
+- **Incorrect Branch/PR Matching for Work Associations:** `findIssueWorkAssociations` matched a pull request's branch name to an issue using a plain substring check (e.g. branch `feature-115` matched issue `#15`), which could copy assignees, milestone, and branch from an unrelated pull request. Branch names are now matched with the same delimiter-bounded pattern used for standalone branch discovery.
+- **Unpaginated Work Association Lookups:** Open pull requests and branches were only inspected on their first page (50 and 100 items respectively), so linked work outside those pages was missed in larger repositories. Both lookups are now fully paginated.
+- **Assignment/Milestone Settings Bypass:** Merging an already-linked pull request's assignees or milestone into an issue no longer happens unless assignment or milestone association is itself enabled/configured, so these settings-gated features are not silently turned on just because a linked pull request exists.
+
+## [2.9.0] - 2026-10-03
+
+### Fixed
+- **Assignment & Milestone Sync for Issues Linked to Existing Pull Requests:** Previously, when an issue was already referenced by an existing open pull request (e.g. via `Closes #<issue>`), the action never checked for that association against the issue itself (only against separately AI-identified related/parent/blocking issues). As a result, automatic user assignment and milestone association did not account for the linked pull request, and a redundant development branch could be created instead of reusing the one already in progress. The issue is now checked for an existing linked pull request/branch first; when found, its assignees and milestone are merged into the issue's automatic assignment and milestone resolution, and its branch is reused instead of creating a new one.
+
 ## [2.8.0] - 2026-10-03
 
 ### Fixed

@@ -50756,44 +50756,46 @@ async function fetchOpenIssues({ token, repository, excludeIssueNumber, limit = 
   }
 }
 async function findIssueWorkAssociations({ token, repository, issueNumber }) {
-  if (!token || !repository || !issueNumber) return { branchName: null, prNumber: null, prUrl: null };
+  const empty = { branchName: null, prNumber: null, prUrl: null, prAssignees: [], prMilestone: null };
+  if (!token || !repository || !issueNumber) return empty;
   try {
     const [owner, repo] = repository.split("/");
     const octokit = new Octokit2({ auth: token });
-    const { data: openPRs } = await octokit.rest.pulls.list({
+    const openPRs = await octokit.paginate(octokit.rest.pulls.list, {
       owner,
       repo,
       state: "open",
-      per_page: 50
+      per_page: 100
     });
     const targetPattern = new RegExp(`(?:#|issues\\/)${issueNumber}\\b`, "i");
+    const branchPattern = new RegExp(`(^|[-_/])${issueNumber}([-_/]|$)`);
     for (const pr of openPRs) {
-      if (pr.body && targetPattern.test(pr.body) || pr.title && targetPattern.test(pr.title) || pr.head?.ref?.includes(String(issueNumber))) {
+      if (pr.body && targetPattern.test(pr.body) || pr.title && targetPattern.test(pr.title) || pr.head?.ref && branchPattern.test(pr.head.ref)) {
         return {
           branchName: pr.head?.ref || null,
           prNumber: pr.number,
-          prUrl: pr.html_url
+          prUrl: pr.html_url,
+          prAssignees: Array.isArray(pr.assignees) ? pr.assignees.map((a) => a.login).filter(Boolean) : [],
+          prMilestone: pr.milestone ? { number: pr.milestone.number, title: pr.milestone.title } : null
         };
       }
     }
     try {
-      const { data: branches } = await octokit.rest.repos.listBranches({
+      const branches = await octokit.paginate(octokit.rest.repos.listBranches, {
         owner,
         repo,
         per_page: 100
       });
-      const issueBranch = branches.find(
-        (b) => new RegExp(`(^|[-_/])${issueNumber}([-_/]|$)`).test(b.name)
-      );
+      const issueBranch = branches.find((b) => branchPattern.test(b.name));
       if (issueBranch) {
-        return { branchName: issueBranch.name, prNumber: null, prUrl: null };
+        return { ...empty, branchName: issueBranch.name };
       }
     } catch {
     }
-    return { branchName: null, prNumber: null, prUrl: null };
+    return empty;
   } catch (err) {
     console.warn(`[GitHub] Warning: Could not inspect work associations for issue #${issueNumber}:`, err.message);
-    return { branchName: null, prNumber: null, prUrl: null };
+    return empty;
   }
 }
 async function linkSubIssue({ token, parentIssueId, subIssueId }) {
@@ -51341,6 +51343,9 @@ function resolveAssignees({ repository, config, labels, title, body }) {
   }
   return Array.from(assigneesSet);
 }
+function isAssignmentEnabled(config) {
+  return Boolean(config.autoAssign) || Array.isArray(config.assignees) && config.assignees.length > 0 || Array.isArray(config.assignmentRules) && config.assignmentRules.length > 0;
+}
 function resolveMilestone({ config, candidateMilestones, recommendedMilestone }) {
   if (!config.milestone) return null;
   if (!candidateMilestones || candidateMilestones.length === 0) {
@@ -51743,6 +51748,12 @@ async function enhanceAndUpdateIssue({
       }
     }
   }
+  const selfExistingWork = !isDuplicate ? await findIssueWorkAssociations({ token: githubToken, repository, issueNumber }) : null;
+  if (selfExistingWork && (selfExistingWork.branchName || selfExistingWork.prNumber)) {
+    console.log(
+      `[GitHub Action] Issue #${issueNumber} is already linked to existing work${selfExistingWork.prNumber ? ` (PR #${selfExistingWork.prNumber})` : ""}${selfExistingWork.branchName ? ` on branch "${selfExistingWork.branchName}"` : ""}.`
+    );
+  }
   if (!isDuplicate && config.linkRelated && relatedIssues.length > 0) {
     for (const relatedNum of relatedIssues) {
       console.log(`[GitHub Action] Cross-linking issue #${issueNumber} as related to #${relatedNum}...`);
@@ -51761,6 +51772,13 @@ async function enhanceAndUpdateIssue({
     title,
     body
   }) : [];
+  if (isAssignmentEnabled(config) && selfExistingWork?.prAssignees?.length) {
+    for (const assignee of selfExistingWork.prAssignees) {
+      if (!resolvedAssignees.includes(assignee)) {
+        resolvedAssignees.push(assignee);
+      }
+    }
+  }
   if (resolvedAssignees.length > 0) {
     await assignUsersToIssue({
       token: githubToken,
@@ -51769,11 +51787,14 @@ async function enhanceAndUpdateIssue({
       assignees: resolvedAssignees
     });
   }
-  const resolvedMilestoneNumber = !isDuplicate ? resolveMilestone({
+  let resolvedMilestoneNumber = !isDuplicate ? resolveMilestone({
     config,
     candidateMilestones,
     recommendedMilestone
   }) : null;
+  if (config.milestone && !resolvedMilestoneNumber && selfExistingWork?.prMilestone) {
+    resolvedMilestoneNumber = selfExistingWork.prMilestone.number;
+  }
   if (resolvedMilestoneNumber) {
     await setIssueMilestone({
       token: githubToken,
@@ -51785,26 +51806,38 @@ async function enhanceAndUpdateIssue({
   let createdBranchName = null;
   let reusedBranchInfo = null;
   if (!isDuplicate && config.createBranch) {
-    const candidateWorkIssues = Array.from(
-      new Set([parentIssue, ...blockedByIssues, ...blockingIssues, ...relatedIssues].filter(Boolean))
-    );
-    for (const relatedNum of candidateWorkIssues) {
-      const existingWork = await findIssueWorkAssociations({
-        token: githubToken,
-        repository,
-        issueNumber: relatedNum
-      });
-      if (existingWork && existingWork.branchName) {
-        reusedBranchInfo = {
-          issueNumber: relatedNum,
-          branchName: existingWork.branchName,
-          prNumber: existingWork.prNumber,
-          prUrl: existingWork.prUrl
-        };
-        console.log(
-          `[GitHub Action] Reusing existing work branch "${existingWork.branchName}" from related issue #${relatedNum}${existingWork.prNumber ? ` (PR #${existingWork.prNumber})` : ""}.`
-        );
-        break;
+    if (selfExistingWork && selfExistingWork.branchName) {
+      reusedBranchInfo = {
+        issueNumber,
+        branchName: selfExistingWork.branchName,
+        prNumber: selfExistingWork.prNumber,
+        prUrl: selfExistingWork.prUrl
+      };
+      console.log(
+        `[GitHub Action] Reusing existing work branch "${selfExistingWork.branchName}" already linked to this issue${selfExistingWork.prNumber ? ` (PR #${selfExistingWork.prNumber})` : ""}.`
+      );
+    } else {
+      const candidateWorkIssues = Array.from(
+        new Set([parentIssue, ...blockedByIssues, ...blockingIssues, ...relatedIssues].filter(Boolean))
+      );
+      for (const relatedNum of candidateWorkIssues) {
+        const existingWork = await findIssueWorkAssociations({
+          token: githubToken,
+          repository,
+          issueNumber: relatedNum
+        });
+        if (existingWork && existingWork.branchName) {
+          reusedBranchInfo = {
+            issueNumber: relatedNum,
+            branchName: existingWork.branchName,
+            prNumber: existingWork.prNumber,
+            prUrl: existingWork.prUrl
+          };
+          console.log(
+            `[GitHub Action] Reusing existing work branch "${existingWork.branchName}" from related issue #${relatedNum}${existingWork.prNumber ? ` (PR #${existingWork.prNumber})` : ""}.`
+          );
+          break;
+        }
       }
     }
     if (reusedBranchInfo) {

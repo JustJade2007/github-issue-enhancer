@@ -124,6 +124,20 @@ function resolveAssignees({ repository, config, labels, title, body }) {
   return Array.from(assigneesSet);
 }
 
+/**
+ * Determines whether assignment has been enabled or configured at all, i.e. whether
+ * `resolveAssignees` could ever produce a non-empty result for this config.
+ * @param {object} config
+ * @returns {boolean}
+ */
+function isAssignmentEnabled(config) {
+  return (
+    Boolean(config.autoAssign) ||
+    (Array.isArray(config.assignees) && config.assignees.length > 0) ||
+    (Array.isArray(config.assignmentRules) && config.assignmentRules.length > 0)
+  );
+}
+
 function resolveMilestone({ config, candidateMilestones, recommendedMilestone }) {
   if (!config.milestone) return null;
 
@@ -592,6 +606,21 @@ async function enhanceAndUpdateIssue({
     }
   }
 
+  // Check whether this issue itself is already referenced by an open Pull Request (e.g. "Closes #N")
+  // or has a matching development branch. When such a relationship already exists, the issue's
+  // assignment, milestone, and branch linking should stay in sync with that existing work instead
+  // of being skipped or duplicated.
+  const selfExistingWork = !isDuplicate
+    ? await findIssueWorkAssociations({ token: githubToken, repository, issueNumber })
+    : null;
+  if (selfExistingWork && (selfExistingWork.branchName || selfExistingWork.prNumber)) {
+    console.log(
+      `[GitHub Action] Issue #${issueNumber} is already linked to existing work${
+        selfExistingWork.prNumber ? ` (PR #${selfExistingWork.prNumber})` : ""
+      }${selfExistingWork.branchName ? ` on branch "${selfExistingWork.branchName}"` : ""}.`
+    );
+  }
+
   // Cross-link Related Issues (best-effort reciprocal comment, no native GitHub
   // "related" relation mutation exists) if enabled (skip for duplicates)
   if (!isDuplicate && config.linkRelated && relatedIssues.length > 0) {
@@ -615,6 +644,16 @@ async function enhanceAndUpdateIssue({
     body
   }) : [];
 
+  // Keep assignees in sync with an already-linked pull request's assignees
+  // (only when assignment is itself enabled/configured; otherwise leave the issue unassigned)
+  if (isAssignmentEnabled(config) && selfExistingWork?.prAssignees?.length) {
+    for (const assignee of selfExistingWork.prAssignees) {
+      if (!resolvedAssignees.includes(assignee)) {
+        resolvedAssignees.push(assignee);
+      }
+    }
+  }
+
   if (resolvedAssignees.length > 0) {
     await assignUsersToIssue({
       token: githubToken,
@@ -625,11 +664,17 @@ async function enhanceAndUpdateIssue({
   }
 
   // Milestone Association (if enabled or configured) (skip for duplicates)
-  const resolvedMilestoneNumber = !isDuplicate ? resolveMilestone({
+  let resolvedMilestoneNumber = !isDuplicate ? resolveMilestone({
     config,
     candidateMilestones,
     recommendedMilestone
   }) : null;
+
+  // Fall back to the milestone already set on a linked pull request, if any
+  // (only when milestone association is itself enabled/configured)
+  if (config.milestone && !resolvedMilestoneNumber && selfExistingWork?.prMilestone) {
+    resolvedMilestoneNumber = selfExistingWork.prMilestone.number;
+  }
 
   if (resolvedMilestoneNumber) {
     await setIssueMilestone({
@@ -645,28 +690,40 @@ async function enhanceAndUpdateIssue({
   let reusedBranchInfo = null;
 
   if (!isDuplicate && config.createBranch) {
-    // Check if any related, parent, or blocking issues already have a PR or branch
-    const candidateWorkIssues = Array.from(
-      new Set([parentIssue, ...blockedByIssues, ...blockingIssues, ...relatedIssues].filter(Boolean))
-    );
+    if (selfExistingWork && selfExistingWork.branchName) {
+      reusedBranchInfo = {
+        issueNumber,
+        branchName: selfExistingWork.branchName,
+        prNumber: selfExistingWork.prNumber,
+        prUrl: selfExistingWork.prUrl
+      };
+      console.log(
+        `[GitHub Action] Reusing existing work branch "${selfExistingWork.branchName}" already linked to this issue${selfExistingWork.prNumber ? ` (PR #${selfExistingWork.prNumber})` : ""}.`
+      );
+    } else {
+      // Check if any related, parent, or blocking issues already have a PR or branch
+      const candidateWorkIssues = Array.from(
+        new Set([parentIssue, ...blockedByIssues, ...blockingIssues, ...relatedIssues].filter(Boolean))
+      );
 
-    for (const relatedNum of candidateWorkIssues) {
-      const existingWork = await findIssueWorkAssociations({
-        token: githubToken,
-        repository,
-        issueNumber: relatedNum
-      });
-      if (existingWork && existingWork.branchName) {
-        reusedBranchInfo = {
-          issueNumber: relatedNum,
-          branchName: existingWork.branchName,
-          prNumber: existingWork.prNumber,
-          prUrl: existingWork.prUrl
-        };
-        console.log(
-          `[GitHub Action] Reusing existing work branch "${existingWork.branchName}" from related issue #${relatedNum}${existingWork.prNumber ? ` (PR #${existingWork.prNumber})` : ""}.`
-        );
-        break;
+      for (const relatedNum of candidateWorkIssues) {
+        const existingWork = await findIssueWorkAssociations({
+          token: githubToken,
+          repository,
+          issueNumber: relatedNum
+        });
+        if (existingWork && existingWork.branchName) {
+          reusedBranchInfo = {
+            issueNumber: relatedNum,
+            branchName: existingWork.branchName,
+            prNumber: existingWork.prNumber,
+            prUrl: existingWork.prUrl
+          };
+          console.log(
+            `[GitHub Action] Reusing existing work branch "${existingWork.branchName}" from related issue #${relatedNum}${existingWork.prNumber ? ` (PR #${existingWork.prNumber})` : ""}.`
+          );
+          break;
+        }
       }
     }
 
