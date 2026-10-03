@@ -292,6 +292,63 @@ export async function linkBlockedBy({ token, blockedIssueId, blockingIssueId }) 
 }
 
 /**
+ * Establishes a discoverable, bidirectional link for a "related" issue.
+ *
+ * GitHub's REST/GraphQL APIs only expose native relation mutations for
+ * parent/sub-issue (`addSubIssue`) and dependency (`addBlockedBy`) relations.
+ * There is no equivalent "related" relation mutation, so a generic related
+ * issue cannot be surfaced in the "Linked issues" panel the same way. To still
+ * establish a real, discoverable relationship (rather than only mentioning the
+ * related issue in a comment on the source issue), this cross-posts a short
+ * reference comment on the related issue itself, creating a reciprocal
+ * timeline cross-reference between both issues.
+ * @param {object} params
+ * @param {string} params.token
+ * @param {string} params.repository
+ * @param {number|string} params.issueNumber - the issue that detected the relation
+ * @param {number|string} params.relatedIssueNumber - the related issue to cross-link
+ */
+export async function linkRelatedIssue({ token, repository, issueNumber, relatedIssueNumber }) {
+  if (!token || !repository || !issueNumber || !relatedIssueNumber) return;
+  const [owner, repo] = repository.split("/");
+  const marker = `<!-- gemini-related-link:${issueNumber} -->`;
+  try {
+    const octokit = new Octokit({ auth: token });
+
+    const { data: existingComments } = await octokit.rest.issues.listComments({
+      owner,
+      repo,
+      issue_number: relatedIssueNumber,
+      per_page: 100
+    });
+    if (existingComments.some((c) => c.body && c.body.includes(marker))) {
+      console.log(`[GitHub] Related issue link already present on #${relatedIssueNumber}, skipping.`);
+      return;
+    }
+
+    const commentBody = [
+      marker,
+      "> [!NOTE]",
+      "> ### 🔗 Related Issue Detected",
+      `> This issue was automatically identified as related to #${issueNumber}.`,
+      "",
+      "---",
+      REPORT_ISSUE_FOOTER
+    ].join("\n");
+
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: relatedIssueNumber,
+      body: commentBody
+    });
+    console.log(`[GitHub] Successfully cross-linked related issue #${relatedIssueNumber} to #${issueNumber}.`);
+  } catch (err) {
+    console.log(`[GitHub] Note: Related issue cross-linking for #${relatedIssueNumber}: ${err.message}`);
+  }
+}
+
+/**
  * Fetches detailed GitHub issue information, including node_id.
  * @param {object} params
  * @param {string} params.token
