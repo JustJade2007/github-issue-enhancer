@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.1] - 2026-10-03
+
+### Fixed
+- **Incorrect Branch/PR Matching for Work Associations:** `findIssueWorkAssociations` matched a pull request's branch name to an issue using a plain substring check (e.g. branch `feature-115` matched issue `#15`), which could copy assignees, milestone, and branch from an unrelated pull request. Branch names are now matched with the same delimiter-bounded pattern used for standalone branch discovery.
+- **Unpaginated Work Association Lookups:** Open pull requests and branches were only inspected on their first page (50 and 100 items respectively), so linked work outside those pages was missed in larger repositories. Both lookups are now fully paginated.
+- **Assignment/Milestone Settings Bypass:** Merging an already-linked pull request's assignees or milestone into an issue no longer happens unless assignment or milestone association is itself enabled/configured, so these settings-gated features are not silently turned on just because a linked pull request exists.
+
 ## [2.9.0] - 2026-10-03
 
 ### Fixed

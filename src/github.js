@@ -184,19 +184,20 @@ export async function findIssueWorkAssociations({ token, repository, issueNumber
     const octokit = new Octokit({ auth: token });
 
     // 1. Check open Pull Requests that reference this issue (e.g. #issueNumber, fixes #..., closes #...)
-    const { data: openPRs } = await octokit.rest.pulls.list({
+    const openPRs = await octokit.paginate(octokit.rest.pulls.list, {
       owner,
       repo,
       state: "open",
-      per_page: 50
+      per_page: 100
     });
 
     const targetPattern = new RegExp(`(?:#|issues\\/)${issueNumber}\\b`, "i");
+    const branchPattern = new RegExp(`(^|[-_/])${issueNumber}([-_/]|$)`);
     for (const pr of openPRs) {
       if (
         (pr.body && targetPattern.test(pr.body)) ||
         (pr.title && targetPattern.test(pr.title)) ||
-        pr.head?.ref?.includes(String(issueNumber))
+        (pr.head?.ref && branchPattern.test(pr.head.ref))
       ) {
         return {
           branchName: pr.head?.ref || null,
@@ -210,14 +211,12 @@ export async function findIssueWorkAssociations({ token, repository, issueNumber
 
     // 2. Check for branches named after the issue (e.g. issue-<num> or <prefix><num>)
     try {
-      const { data: branches } = await octokit.rest.repos.listBranches({
+      const branches = await octokit.paginate(octokit.rest.repos.listBranches, {
         owner,
         repo,
         per_page: 100
       });
-      const issueBranch = branches.find((b) =>
-        new RegExp(`(^|[-_/])${issueNumber}([-_/]|$)`).test(b.name)
-      );
+      const issueBranch = branches.find((b) => branchPattern.test(b.name));
       if (issueBranch) {
         return { ...empty, branchName: issueBranch.name };
       }

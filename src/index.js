@@ -124,6 +124,20 @@ function resolveAssignees({ repository, config, labels, title, body }) {
   return Array.from(assigneesSet);
 }
 
+/**
+ * Determines whether assignment has been enabled or configured at all, i.e. whether
+ * `resolveAssignees` could ever produce a non-empty result for this config.
+ * @param {object} config
+ * @returns {boolean}
+ */
+function isAssignmentEnabled(config) {
+  return (
+    Boolean(config.autoAssign) ||
+    (Array.isArray(config.assignees) && config.assignees.length > 0) ||
+    (Array.isArray(config.assignmentRules) && config.assignmentRules.length > 0)
+  );
+}
+
 function resolveMilestone({ config, candidateMilestones, recommendedMilestone }) {
   if (!config.milestone) return null;
 
@@ -631,7 +645,8 @@ async function enhanceAndUpdateIssue({
   }) : [];
 
   // Keep assignees in sync with an already-linked pull request's assignees
-  if (selfExistingWork?.prAssignees?.length) {
+  // (only when assignment is itself enabled/configured; otherwise leave the issue unassigned)
+  if (isAssignmentEnabled(config) && selfExistingWork?.prAssignees?.length) {
     for (const assignee of selfExistingWork.prAssignees) {
       if (!resolvedAssignees.includes(assignee)) {
         resolvedAssignees.push(assignee);
@@ -656,7 +671,8 @@ async function enhanceAndUpdateIssue({
   }) : null;
 
   // Fall back to the milestone already set on a linked pull request, if any
-  if (!resolvedMilestoneNumber && selfExistingWork?.prMilestone) {
+  // (only when milestone association is itself enabled/configured)
+  if (config.milestone && !resolvedMilestoneNumber && selfExistingWork?.prMilestone) {
     resolvedMilestoneNumber = selfExistingWork.prMilestone.number;
   }
 

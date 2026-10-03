@@ -50761,15 +50761,16 @@ async function findIssueWorkAssociations({ token, repository, issueNumber }) {
   try {
     const [owner, repo] = repository.split("/");
     const octokit = new Octokit2({ auth: token });
-    const { data: openPRs } = await octokit.rest.pulls.list({
+    const openPRs = await octokit.paginate(octokit.rest.pulls.list, {
       owner,
       repo,
       state: "open",
-      per_page: 50
+      per_page: 100
     });
     const targetPattern = new RegExp(`(?:#|issues\\/)${issueNumber}\\b`, "i");
+    const branchPattern = new RegExp(`(^|[-_/])${issueNumber}([-_/]|$)`);
     for (const pr of openPRs) {
-      if (pr.body && targetPattern.test(pr.body) || pr.title && targetPattern.test(pr.title) || pr.head?.ref?.includes(String(issueNumber))) {
+      if (pr.body && targetPattern.test(pr.body) || pr.title && targetPattern.test(pr.title) || pr.head?.ref && branchPattern.test(pr.head.ref)) {
         return {
           branchName: pr.head?.ref || null,
           prNumber: pr.number,
@@ -50780,14 +50781,12 @@ async function findIssueWorkAssociations({ token, repository, issueNumber }) {
       }
     }
     try {
-      const { data: branches } = await octokit.rest.repos.listBranches({
+      const branches = await octokit.paginate(octokit.rest.repos.listBranches, {
         owner,
         repo,
         per_page: 100
       });
-      const issueBranch = branches.find(
-        (b) => new RegExp(`(^|[-_/])${issueNumber}([-_/]|$)`).test(b.name)
-      );
+      const issueBranch = branches.find((b) => branchPattern.test(b.name));
       if (issueBranch) {
         return { ...empty, branchName: issueBranch.name };
       }
@@ -51344,6 +51343,9 @@ function resolveAssignees({ repository, config, labels, title, body }) {
   }
   return Array.from(assigneesSet);
 }
+function isAssignmentEnabled(config) {
+  return Boolean(config.autoAssign) || Array.isArray(config.assignees) && config.assignees.length > 0 || Array.isArray(config.assignmentRules) && config.assignmentRules.length > 0;
+}
 function resolveMilestone({ config, candidateMilestones, recommendedMilestone }) {
   if (!config.milestone) return null;
   if (!candidateMilestones || candidateMilestones.length === 0) {
@@ -51770,7 +51772,7 @@ async function enhanceAndUpdateIssue({
     title,
     body
   }) : [];
-  if (selfExistingWork?.prAssignees?.length) {
+  if (isAssignmentEnabled(config) && selfExistingWork?.prAssignees?.length) {
     for (const assignee of selfExistingWork.prAssignees) {
       if (!resolvedAssignees.includes(assignee)) {
         resolvedAssignees.push(assignee);
@@ -51790,7 +51792,7 @@ async function enhanceAndUpdateIssue({
     candidateMilestones,
     recommendedMilestone
   }) : null;
-  if (!resolvedMilestoneNumber && selfExistingWork?.prMilestone) {
+  if (config.milestone && !resolvedMilestoneNumber && selfExistingWork?.prMilestone) {
     resolvedMilestoneNumber = selfExistingWork.prMilestone.number;
   }
   if (resolvedMilestoneNumber) {
