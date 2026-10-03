@@ -167,14 +167,18 @@ export async function fetchOpenIssues({ token, repository, excludeIssueNumber, l
 
 /**
  * Discovers linked development branch or Pull Request for an issue.
+ * When an existing open Pull Request already references the issue, its assignees and
+ * milestone are also returned so callers can keep the issue's assignment/milestone in sync
+ * with the pull request that is already doing the work.
  * @param {object} params
  * @param {string} params.token
  * @param {string} params.repository
  * @param {number|string} params.issueNumber
- * @returns {Promise<{ branchName: string|null, prNumber: number|null, prUrl: string|null }>}
+ * @returns {Promise<{ branchName: string|null, prNumber: number|null, prUrl: string|null, prAssignees: string[], prMilestone: {number: number, title: string}|null }>}
  */
 export async function findIssueWorkAssociations({ token, repository, issueNumber }) {
-  if (!token || !repository || !issueNumber) return { branchName: null, prNumber: null, prUrl: null };
+  const empty = { branchName: null, prNumber: null, prUrl: null, prAssignees: [], prMilestone: null };
+  if (!token || !repository || !issueNumber) return empty;
   try {
     const [owner, repo] = repository.split("/");
     const octokit = new Octokit({ auth: token });
@@ -197,7 +201,9 @@ export async function findIssueWorkAssociations({ token, repository, issueNumber
         return {
           branchName: pr.head?.ref || null,
           prNumber: pr.number,
-          prUrl: pr.html_url
+          prUrl: pr.html_url,
+          prAssignees: Array.isArray(pr.assignees) ? pr.assignees.map((a) => a.login).filter(Boolean) : [],
+          prMilestone: pr.milestone ? { number: pr.milestone.number, title: pr.milestone.title } : null
         };
       }
     }
@@ -213,16 +219,16 @@ export async function findIssueWorkAssociations({ token, repository, issueNumber
         new RegExp(`(^|[-_/])${issueNumber}([-_/]|$)`).test(b.name)
       );
       if (issueBranch) {
-        return { branchName: issueBranch.name, prNumber: null, prUrl: null };
+        return { ...empty, branchName: issueBranch.name };
       }
     } catch {
       // ignore branch listing errors
     }
 
-    return { branchName: null, prNumber: null, prUrl: null };
+    return empty;
   } catch (err) {
     console.warn(`[GitHub] Warning: Could not inspect work associations for issue #${issueNumber}:`, err.message);
-    return { branchName: null, prNumber: null, prUrl: null };
+    return empty;
   }
 }
 

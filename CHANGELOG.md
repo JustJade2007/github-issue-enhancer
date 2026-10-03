@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.0] - 2026-10-03
+
+### Fixed
+- **Assignment & Milestone Sync for Issues Linked to Existing Pull Requests:** Previously, when an issue was already referenced by an existing open pull request (e.g. via `Closes #<issue>`), the action never checked for that association against the issue itself (only against separately AI-identified related/parent/blocking issues). As a result, automatic user assignment and milestone association did not account for the linked pull request, and a redundant development branch could be created instead of reusing the one already in progress. The issue is now checked for an existing linked pull request/branch first; when found, its assignees and milestone are merged into the issue's automatic assignment and milestone resolution, and its branch is reused instead of creating a new one.
+
 ## [2.8.0] - 2026-10-03
 
 ### Fixed
