@@ -17,7 +17,8 @@ import {
   fetchOpenIssues,
   findIssueWorkAssociations,
   linkSubIssue,
-  linkBlockedBy
+  linkBlockedBy,
+  linkRelatedIssue
 } from "./github.js";
 import { assignIssueToProject } from "./projects.js";
 
@@ -604,6 +605,20 @@ async function enhanceAndUpdateIssue({
         selfExistingWork.prNumber ? ` (PR #${selfExistingWork.prNumber})` : ""
       }${selfExistingWork.branchName ? ` on branch "${selfExistingWork.branchName}"` : ""}.`
     );
+  }
+
+  // Cross-link Related Issues (best-effort reciprocal comment, no native GitHub
+  // "related" relation mutation exists) if enabled (skip for duplicates)
+  if (!isDuplicate && config.linkRelated && relatedIssues.length > 0) {
+    for (const relatedNum of relatedIssues) {
+      console.log(`[GitHub Action] Cross-linking issue #${issueNumber} as related to #${relatedNum}...`);
+      await linkRelatedIssue({
+        token: githubToken,
+        repository,
+        issueNumber,
+        relatedIssueNumber: relatedNum
+      });
+    }
   }
 
   // Automated Assignment (if enabled or configured) (skip for duplicates)

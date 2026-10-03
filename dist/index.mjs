@@ -50848,6 +50848,42 @@ async function linkBlockedBy({ token, blockedIssueId, blockingIssueId }) {
     console.log(`[GitHub] Note: GraphQL issue dependency linking: ${err.message}`);
   }
 }
+async function linkRelatedIssue({ token, repository, issueNumber, relatedIssueNumber }) {
+  if (!token || !repository || !issueNumber || !relatedIssueNumber) return;
+  const [owner, repo] = repository.split("/");
+  const marker = `<!-- gemini-related-link:${issueNumber} -->`;
+  try {
+    const octokit = new Octokit2({ auth: token });
+    const { data: existingComments } = await octokit.rest.issues.listComments({
+      owner,
+      repo,
+      issue_number: relatedIssueNumber,
+      per_page: 100
+    });
+    if (existingComments.some((c) => c.body && c.body.includes(marker))) {
+      console.log(`[GitHub] Related issue link already present on #${relatedIssueNumber}, skipping.`);
+      return;
+    }
+    const commentBody = [
+      marker,
+      "> [!NOTE]",
+      "> ### \u{1F517} Related Issue Detected",
+      `> This issue was automatically identified as related to #${issueNumber}.`,
+      "",
+      "---",
+      REPORT_ISSUE_FOOTER
+    ].join("\n");
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: relatedIssueNumber,
+      body: commentBody
+    });
+    console.log(`[GitHub] Successfully cross-linked related issue #${relatedIssueNumber} to #${issueNumber}.`);
+  } catch (err) {
+    console.log(`[GitHub] Note: Related issue cross-linking for #${relatedIssueNumber}: ${err.message}`);
+  }
+}
 async function getIssueDetails({ token, repository, issueNumber }) {
   if (!token || !repository || !issueNumber) return null;
   try {
@@ -51715,6 +51751,17 @@ async function enhanceAndUpdateIssue({
     console.log(
       `[GitHub Action] Issue #${issueNumber} is already linked to existing work${selfExistingWork.prNumber ? ` (PR #${selfExistingWork.prNumber})` : ""}${selfExistingWork.branchName ? ` on branch "${selfExistingWork.branchName}"` : ""}.`
     );
+  }
+  if (!isDuplicate && config.linkRelated && relatedIssues.length > 0) {
+    for (const relatedNum of relatedIssues) {
+      console.log(`[GitHub Action] Cross-linking issue #${issueNumber} as related to #${relatedNum}...`);
+      await linkRelatedIssue({
+        token: githubToken,
+        repository,
+        issueNumber,
+        relatedIssueNumber: relatedNum
+      });
+    }
   }
   const resolvedAssignees = !isDuplicate ? resolveAssignees({
     repository,
